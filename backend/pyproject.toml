@@ -1,0 +1,35 @@
+[project]
+name = "job-analyzer"
+version = "0.1.0"
+description = "Turns unstructured job postings into structured, typed data."
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.161.1",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "pytest>=9.1.1",
+    "ruff>=0.17.2",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes (unused imports/vars, undefined names)
+    "I",       # isort (import ordering)
+    "UP",      # pyupgrade (modern syntax: list[int], X | None, ...)
+    "B",       # bugbear (common footguns, e.g. mutable default args)
+    "SIM",     # simplify
+    "ASYNC",   # blocking calls inside async functions
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]  # makes `import app` work without packaging the project
