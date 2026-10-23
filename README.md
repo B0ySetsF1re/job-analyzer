@@ -34,9 +34,39 @@ POST /postings ──► Postgres (status: pending) ──► Procrastinate job
 - [mise](https://mise.jdx.dev/): installs the pinned Python / Node / uv versions (`mise install`)
 - Docker or Podman (for Postgres)
 
-### Run locally
+### Setup
 
-_TODO: filled in once `backend/`, docker-compose and Makefile exist._
+```bash
+mise install            # Python 3.13 + uv, as pinned in mise.toml
+cd backend
+uv sync                 # create .venv and install dependencies (incl. dev group)
+```
+
+### Run the API
+
+```bash
+cd backend
+uv run uvicorn app.main:app --reload
+```
+
+- API: http://localhost:8000
+- Health check: http://localhost:8000/health
+- OpenAPI UI: http://localhost:8000/docs
+
+Drop `--reload` when running under a debugger: the reloader spawns a child process,
+so breakpoints won't hit.
+
+### Test and lint
+
+```bash
+cd backend
+uv run pytest                                      # all tests
+uv run pytest tests/test_health.py -v              # one file, verbose
+uv run ruff check . && uv run ruff format --check . # lint + format check
+uv run ruff format .                               # auto-format
+```
+
+_Postgres via docker-compose and Makefile shortcuts will be added later._
 
 ## API
 

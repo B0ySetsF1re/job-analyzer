@@ -1,0 +1,7 @@
+[tools]
+python = "3.13"
+uv = "0.13"
+
+[env]
+# Use the mise-provided interpreter; never let uv download its own Python.
+UV_PYTHON_DOWNLOADS = "never"

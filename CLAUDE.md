@@ -32,6 +32,17 @@ When helping:
 - Briefly explain non-obvious Python idioms and library choices in each change.
 - Update the checklists in the Plan section when a step is done.
 
+### Git
+- **Never commit (or push) unless explicitly asked.** The author commits by default;
+  when a step is done, stop and suggest a commit message instead.
+- All commit messages follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/):
+  `<type>(<scope>): <description>`
+  - Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, `style`, `revert`.
+  - Scopes: `backend`, `frontend`, `infra`, `helm`, `terraform`, `deps`, or omit for repo-wide changes.
+  - Description: imperative, lowercase, no trailing period (`add health endpoint`, not `Added ...`).
+  - Breaking changes: `!` after type/scope and/or a `BREAKING CHANGE:` footer.
+  - Optional body (what/why) after a blank line; footers last.
+
 ### Toolchain (mise + uv)
 - **mise** manages runtime versions (Python 3.13, Node.js, uv, later terraform/kubectl/helm)
   via `mise.toml` at the repo root. Don't install runtimes via Homebrew/pyenv/nvm.
@@ -51,6 +62,10 @@ When helping:
 
 ### Commands
 _Fill in as they appear (make dev, make test, make lint, make gen-client, ...)._
+Run from `backend/`:
+- `uv run pytest` — tests
+- `uv run ruff check . && uv run ruff format --check .` — lint
+- `uv run uvicorn app.main:app --reload` — API on :8000 (OpenAPI UI at `/docs`)
 
 ## What the service does
 Turns unstructured job postings (pasted text, later screenshots) into structured, typed data,
@@ -141,7 +156,7 @@ job-analyzer/
 ## Plan
 ### Phase 0 — Local environment
 - [x] Repo, .gitignore, README skeleton, this file
-- [ ] `backend/` with uv, FastAPI hello world, ruff, pytest
+- [x] `backend/` with uv, FastAPI hello world, ruff, pytest
 - [ ] docker-compose: Postgres + api (hot reload)
 - [ ] Makefile entry points
 - [ ] Settings via pydantic-settings + `.env.example`
