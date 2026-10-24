@@ -75,7 +75,7 @@ Rules:
 
 ### Commands
 Prefer the Makefile (repo root; `make` lists all targets):
-- `make install` — `mise install` + `uv sync`
+- `make install` — `mise install` + `uv sync` + create `.env` from `.env.example`
 - `make dev` — API on the host with hot reload
 - `make test` — pytest (`ARGS="..."` for extra pytest args)
 - `make lint` / `make fmt` / `make check` (lint + test)
@@ -183,7 +183,7 @@ job-analyzer/
 - [x] `backend/` with uv, FastAPI hello world, ruff, pytest
 - [x] docker-compose: Postgres + api (hot reload)
 - [x] Makefile entry points
-- [ ] Settings via pydantic-settings + `.env.example`
+- [x] Settings via pydantic-settings + `.env.example`
 
 ### Phase 1 — Core pipeline
 - [ ] DB models + Alembic migrations (postings, profile)

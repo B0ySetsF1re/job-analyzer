@@ -37,10 +37,11 @@ POST /postings ──► Postgres (status: pending) ──► Procrastinate job
 ### Setup
 
 ```bash
-mise install            # Python 3.13 + uv, as pinned in mise.toml
-cd backend
-uv sync                 # create .venv and install dependencies (incl. dev group)
+make install            # mise install + uv sync + create .env from .env.example
 ```
+
+Or step by step: `mise install`, then `cd backend && uv sync`, then `cp .env.example .env`.
+Configuration lives in `.env` (see `.env.example` for all variables).
 
 ### Run the API
 

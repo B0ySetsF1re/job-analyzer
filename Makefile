@@ -10,9 +10,10 @@ UV_RUN  := uv run --directory $(BACKEND)
 help: ## Show available targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-8s\033[0m %s\n", $$1, $$2}'
 
-install: ## Install runtimes (mise) and Python deps (uv)
+install: ## Install runtimes (mise), Python deps (uv), create .env if missing
 	mise install
 	uv sync --directory $(BACKEND)
+	@test -f .env || (cp .env.example .env && echo "Created .env from .env.example")
 
 dev: ## Run the API on the host with hot reload (:8000)
 	$(UV_RUN) uvicorn app.main:app --reload

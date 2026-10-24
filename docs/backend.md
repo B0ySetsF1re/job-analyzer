@@ -16,11 +16,13 @@ backend/
   app/
     __init__.py
     main.py           # FastAPI() instance + router registration
+    config.py         # Settings (pydantic-settings) + get_settings()
     api/
       __init__.py
       health.py       # GET /health
   tests/
-    conftest.py       # shared fixtures (TestClient)
+    conftest.py       # shared fixtures (TestClient, settings override)
+    test_config.py
     test_health.py
   pyproject.toml      # project metadata, dependencies, tool config
   uv.lock             # lockfile (committed)
@@ -79,6 +81,40 @@ commands run from `backend/` and pytest has `pythonpath = ["."]`.
   No separate `response_model=` or `@ApiResponse` needed
 - Response models are Pydantic `BaseModel` subclasses — the DTO-with-class-validator
   equivalent, but validation runs on construction
+
+---
+
+## Configuration
+
+`app/config.py` defines one typed `Settings(BaseSettings)` class (pydantic-settings).
+NestJS parallel: `@nestjs/config` + a Joi/zod validation schema, in one class.
+
+- **Sources, highest priority first:** constructor kwargs → real env vars → repo-root
+  `.env` → field defaults. Env var names are the field names, case-insensitive
+  (`app_env` ← `APP_ENV`)
+- **Validated at load time:** a missing `DATABASE_URL`, a non-Postgres URL or
+  `APP_ENV=staging` raise `ValidationError` immediately, not on first use
+- **`.env` path is resolved from `config.py`** (`parents[2]` = repo root), not from the
+  working directory. A missing file is silently ignored — in the API container, compose
+  passes real env vars instead
+- **`extra="ignore"`:** `.env` also contains `POSTGRES_*` for docker-compose; without it,
+  unknown keys would fail validation
+- `.env.example` is committed; `.env` is not (`make install` creates it)
+
+### `get_settings()` and dependency injection
+- `@lru_cache` on a zero-arg function = computed once, then cached → a singleton provider
+- Handlers receive it via `settings: Annotated[Settings, Depends(get_settings)]`. FastAPI
+  resolves `Depends(...)` per request (NestJS: constructor injection, but per parameter)
+- `Annotated[T, Depends(f)]` keeps the parameter's type as `T` for the type checker while
+  attaching the DI metadata for FastAPI
+
+### Overriding in tests
+- `app.dependency_overrides[get_settings] = get_test_settings` swaps the provider for every
+  request (NestJS: `.overrideProvider(ConfigService).useValue(...)`)
+- It mutates the global `app`, so the `client` fixture clears it after `yield`
+- `Settings(_env_file=None)` builds settings without reading `.env`, so tests don't depend
+  on your local file
+- `monkeypatch.setenv` / `delenv` change env vars for one test and restore them afterwards
 
 ---
 
@@ -151,6 +187,16 @@ The `anyio` pytest plugin (installed with FastAPI) will run `async def` tests la
   Unlike TS literal types, Pydantic checks this when the model is constructed
 - Returning a plain dict (`{"status": "ok"}`) also passes (FastAPI validates it against the
   return type), but returning the model instance lets the type checker verify it too
+
+### `make fmt` deletes an import you're about to use
+- `ruff check --fix` removes unused imports (`F401`). In scaffold + TODO files, imports
+  for the TODO code are unused until you write it — run `make lint` (read-only) instead of
+  `make fmt` until the TODO is done
+
+### `@lru_cache` settings and env changes
+- `get_settings()` reads the environment once per process. Changing `.env` needs an API
+  restart (`--reload` only watches `.py` files). In tests, construct `Settings(...)`
+  directly or call `get_settings.cache_clear()`
 
 ### `StarletteDeprecationWarning`: install `httpx2` instead of `httpx`
 - Starlette's `TestClient` deprecated `httpx`; the dev dependency is `httpx2`

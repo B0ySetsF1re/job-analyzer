@@ -62,7 +62,7 @@ language-agnostic). Run `make` with no target to list everything:
 
 | Target | Runs |
 |---|---|
-| `make install` | `mise install` + `uv sync` |
+| `make install` | `mise install` + `uv sync` + create `.env` from `.env.example` if missing |
 | `make dev` | API on the host with `--reload` |
 | `make test` | pytest; extra args via `make test ARGS="-k health -x"` |
 | `make lint` | `ruff check` + `ruff format --check` |
@@ -128,9 +128,17 @@ docker compose --profile api down          # stop everything (data kept)
 docker compose down -v                     # stop and wipe the database volume
 ```
 
+### `.env`
+- One `.env` at the repo root serves both compose and the backend. Compose reads it
+  automatically for `${VAR:-default}` interpolation; the backend reads it via
+  pydantic-settings (see [backend.md](backend.md#configuration))
+- `DATABASE_URL` in `.env` uses host `localhost` (API on the host). The `api` service sets
+  its own `DATABASE_URL` with host `postgres` (the service name on the compose network);
+  real env vars beat `.env`, so the container value wins
+
 ### Postgres
 - Credentials default to `app`/`app`/`job_analyzer` and can be overridden via
-  `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`
+  `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` in `.env`
 - `pg_isready` healthcheck; the `api` service waits for it via
   `depends_on: condition: service_healthy` (the container being *started* is not enough —
   Postgres needs a few seconds before it accepts connections)
