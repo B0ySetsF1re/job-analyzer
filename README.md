@@ -83,10 +83,16 @@ _Makefile shortcuts will be added later._
 
 _TODO: endpoint table / link to OpenAPI docs (`/docs`)._
 
+## Docs
+
+- [Local development](docs/local-dev.md): toolchain (mise, uv), Docker Compose, dev container, gotchas
+- [Backend](docs/backend.md): project layout, `pyproject.toml`, app wiring, ruff, pytest
+
 ## Repo layout
 
 ```
 backend/    FastAPI app, agents, tasks, migrations, tests
+docs/       topic docs
 frontend/   React client (optional)
 infra/      Terraform + Helm
 ```

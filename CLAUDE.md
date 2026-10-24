@@ -32,6 +32,19 @@ When helping:
 - Briefly explain non-obvious Python idioms and library choices in each change.
 - Update the checklists in the Plan section when a step is done.
 
+### Docs
+Topic docs live in `docs/`, one file per area (Overview → Structure → topics → Gotchas):
+- `docs/local-dev.md` covers mise, uv, local-only folders, running the API, Docker Compose
+  and the dev container. Read it before changing the toolchain, `mise.toml`,
+  `docker-compose.yml` or `Dockerfile.dev`.
+- `docs/backend.md` covers the backend layout, `pyproject.toml`, packages, app wiring,
+  ruff and pytest. Read it before changing project structure or tooling config.
+
+Rules:
+- When a non-obvious issue comes up, add it to the relevant doc's **Gotchas** section
+  (symptom/cause → fix) in the same change.
+- Create a new doc only when its phase starts; no placeholder files.
+
 ### Git
 - **Never commit (or push) unless explicitly asked.** The author commits by default;
   when a step is done, stop and suggest a commit message instead.
@@ -148,6 +161,7 @@ job-analyzer/
 │   ├── migrations/
 │   ├── tests/
 │   └── pyproject.toml
+├── docs/               # topic docs (see Docs section)
 ├── frontend/
 ├── infra/
 │   ├── terraform/
