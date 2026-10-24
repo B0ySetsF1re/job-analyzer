@@ -1,0 +1,43 @@
+# Local dev stack.
+#   docker compose up -d               → Postgres only (default: API runs on the host via uv)
+#   docker compose --profile api up    → Postgres + API in a container with hot reload
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-job_analyzer}
+    ports:
+      - "5432:5432"
+    volumes:
+      # Postgres 18+ images keep data under /var/lib/postgresql/<major>/, so mount the parent.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  api:
+    profiles: ["api"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    environment:
+      # Not read by the app yet; wired up with pydantic-settings in Phase 0, item 5.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres:5432/${POSTGRES_DB:-job_analyzer}
+      # File events don't cross the macOS VM boundary reliably (Podman/Docker Desktop); poll instead.
+      WATCHFILES_FORCE_POLLING: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount only the source, so the container's own .venv isn't shadowed by the host's.
+      - ./backend/app:/app/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

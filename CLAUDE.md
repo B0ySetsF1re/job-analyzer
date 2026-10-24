@@ -67,6 +67,10 @@ Run from `backend/`:
 - `uv run ruff check . && uv run ruff format --check .` — lint
 - `uv run uvicorn app.main:app --reload` — API on :8000 (OpenAPI UI at `/docs`)
 
+Run from repo root:
+- `docker compose up -d` — Postgres only (default dev setup)
+- `docker compose --profile api up --build` — Postgres + API container with hot reload
+
 ## What the service does
 Turns unstructured job postings (pasted text, later screenshots) into structured, typed data,
 stores it in Postgres, and lets the user compare postings against their CV and ask
@@ -157,7 +161,7 @@ job-analyzer/
 ### Phase 0 — Local environment
 - [x] Repo, .gitignore, README skeleton, this file
 - [x] `backend/` with uv, FastAPI hello world, ruff, pytest
-- [ ] docker-compose: Postgres + api (hot reload)
+- [x] docker-compose: Postgres + api (hot reload)
 - [ ] Makefile entry points
 - [ ] Settings via pydantic-settings + `.env.example`
 

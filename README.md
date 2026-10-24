@@ -66,7 +66,18 @@ uv run ruff check . && uv run ruff format --check . # lint + format check
 uv run ruff format .                               # auto-format
 ```
 
-_Postgres via docker-compose and Makefile shortcuts will be added later._
+### Docker Compose
+
+```bash
+docker compose up -d                       # Postgres only (localhost:5432, user/pass/db: app/app/job_analyzer)
+docker compose --profile api up --build    # Postgres + API in a container (hot reload on backend/app)
+docker compose --profile api down          # stop everything (data kept in the `pgdata` volume)
+docker compose down -v                     # stop and wipe the database
+```
+
+Default workflow: Postgres in Docker, API on the host via `uv run` (easier debugging).
+
+_Makefile shortcuts will be added later._
 
 ## API
 
