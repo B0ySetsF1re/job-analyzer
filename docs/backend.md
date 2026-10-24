@@ -41,8 +41,8 @@ equivalent. `uv.lock` next to it is the lockfile (`pnpm-lock.yaml` equivalent).
 | `[dependency-groups] dev` | pytest, ruff, httpx2 | `devDependencies` |
 | `[tool.ruff]`, `[tool.pytest.ini_options]` | Per-tool config | `"jest": {}` / `"eslintConfig": {}` blocks |
 
-There is no `scripts` section in Python packaging; command shortcuts will live in a
-Makefile at the repo root (Phase 0, item 4).
+There is no `scripts` section in Python packaging; command shortcuts live in the root
+`Makefile` (see [local-dev.md](local-dev.md#makefile)).
 
 The project is not packaged (`uv init --bare`, no build system). `app` is importable because
 commands run from `backend/` and pytest has `pythonpath = ["."]`.

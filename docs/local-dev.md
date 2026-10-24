@@ -55,6 +55,31 @@ uv plays the role of pnpm for Python. All commands run from `backend/`:
 
 ---
 
+## Makefile
+
+The root `Makefile` is the command runner (the `"scripts"` section of `package.json`, but
+language-agnostic). Run `make` with no target to list everything:
+
+| Target | Runs |
+|---|---|
+| `make install` | `mise install` + `uv sync` |
+| `make dev` | API on the host with `--reload` |
+| `make test` | pytest; extra args via `make test ARGS="-k health -x"` |
+| `make lint` | `ruff check` + `ruff format --check` |
+| `make fmt` | `ruff check --fix` + `ruff format` |
+| `make check` | `lint` then `test` (prerequisites, like `"ci": "pnpm lint && pnpm test"`) |
+| `make db` | Postgres only, waits until healthy |
+| `make up` / `make down` | Postgres + API container / stop everything |
+
+How to read it:
+- `target: prereqs ## description` — the `## ` text is what `make help` prints
+- Recipe lines run in a shell, one by one, and stop at the first failure
+- `.PHONY` lists targets that are commands, not files (see Gotchas)
+- `$(VAR)` is a make variable; `UV_RUN := uv run --directory backend` is why every
+  target works from the repo root
+
+---
+
 ## Local-only Folders
 
 None of these are committed (all covered by `.gitignore`); all are safe to delete.
@@ -168,6 +193,25 @@ docker compose down -v                     # stop and wipe the database volume
 ### `$$` in the compose healthcheck
 - `pg_isready -U $${POSTGRES_USER}` — `$$` escapes the variable so Compose doesn't
   interpolate it; the container's shell expands it at runtime
+
+### Makefile: `*** missing separator. Stop.`
+- **Cause:** a recipe line is indented with spaces; make requires a real TAB
+- **Fix:** re-indent with a TAB (editors usually do this for files named `Makefile`, but
+  pasted snippets often carry spaces)
+
+### Makefile: `cd` on one recipe line has no effect on the next
+- Each recipe line runs in its own shell. Use `uv run --directory backend` (or
+  `cd backend && cmd` on one line) instead. `.ONESHELL` would change this, but macOS ships
+  GNU Make 3.81, which doesn't support it
+
+### Makefile: a target "is up to date" and does nothing
+- **Cause:** make treats targets as files to build. If a file/folder with the target's name
+  exists (e.g. `test`) and the target isn't in `.PHONY`, make skips it
+- **Fix:** add every command target to `.PHONY`
+
+### Makefile: `$` in shell commands
+- Make expands `$` itself; a literal `$` for the shell must be written `$$` (see the `awk`
+  call in `help`)
 
 ### uv image tags: versioned tags are trixie-based
 - `uv:0.13-python3.13-bookworm-slim` does not exist; versioned tags use Debian trixie

@@ -74,8 +74,14 @@ Rules:
 - If debugging inside Docker is needed: debugpy on port 5678, remote attach.
 
 ### Commands
-_Fill in as they appear (make dev, make test, make lint, make gen-client, ...)._
-Run from `backend/`:
+Prefer the Makefile (repo root; `make` lists all targets):
+- `make install` — `mise install` + `uv sync`
+- `make dev` — API on the host with hot reload
+- `make test` — pytest (`ARGS="..."` for extra pytest args)
+- `make lint` / `make fmt` / `make check` (lint + test)
+- `make db` — Postgres only; `make up` / `make down` — full stack with API container
+
+Underlying commands, run from `backend/`:
 - `uv run pytest` — tests
 - `uv run ruff check . && uv run ruff format --check .` — lint
 - `uv run uvicorn app.main:app --reload` — API on :8000 (OpenAPI UI at `/docs`)
@@ -176,7 +182,7 @@ job-analyzer/
 - [x] Repo, .gitignore, README skeleton, this file
 - [x] `backend/` with uv, FastAPI hello world, ruff, pytest
 - [x] docker-compose: Postgres + api (hot reload)
-- [ ] Makefile entry points
+- [x] Makefile entry points
 - [ ] Settings via pydantic-settings + `.env.example`
 
 ### Phase 1 — Core pipeline

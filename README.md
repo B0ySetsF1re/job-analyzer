@@ -77,7 +77,16 @@ docker compose down -v                     # stop and wipe the database
 
 Default workflow: Postgres in Docker, API on the host via `uv run` (easier debugging).
 
-_Makefile shortcuts will be added later._
+### Make shortcuts
+
+From the repo root (run `make` to list all targets):
+
+```bash
+make install   # mise install + uv sync
+make db        # Postgres in Docker
+make dev       # API on the host with hot reload
+make check     # lint + tests
+```
 
 ## API
 
