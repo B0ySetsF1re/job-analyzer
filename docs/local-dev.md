@@ -53,6 +53,18 @@ uv plays the role of pnpm for Python. All commands run from `backend/`:
 `uv run` finds the project by walking up from the current directory looking for
 `pyproject.toml`. Only `backend/` has one — see Gotchas.
 
+### Without mise
+
+mise is recommended but optional. Without it, uv provides Python:
+
+- `UV_PYTHON_DOWNLOADS=never` is set only in `mise.toml`'s `[env]`, so without mise uv
+  falls back to its default and **downloads Python 3.13** into its own cache if no matching
+  interpreter is installed (like `nvm install`, done automatically)
+- `make install` skips `mise install` when mise isn't on `PATH` and runs
+  `uv sync --python 3.13`; every other target only needs `uv` and `docker`
+- After the first sync, `.venv` remembers its interpreter, so later `uv run` calls need no
+  `--python` flag
+
 ---
 
 ## Makefile
@@ -62,7 +74,7 @@ language-agnostic). Run `make` with no target to list everything:
 
 | Target | Runs |
 |---|---|
-| `make install` | `mise install` + `uv sync` + create `.env` from `.env.example` if missing |
+| `make install` | `mise install` (skipped if mise isn't installed) + `uv sync --python 3.13` + create `.env` from `.env.example` if missing |
 | `make dev` | API on the host with `--reload` |
 | `make test` | pytest; extra args via `make test ARGS="-k health -x"` |
 | `make lint` | `ruff check` + `ruff format --check` |
@@ -178,6 +190,17 @@ docker compose down -v                     # stop and wipe the database volume
 - **Fix:** run from `backend/`, or `uv run --directory backend pytest`
 - **Note:** Anaconda's `bin` on `PATH` turns a clear "command not found" into a confusing
   import error. `conda config --set auto_activate_base false` avoids that
+
+### Without mise, uv picks Python 3.14 instead of 3.13
+- **Cause:** `requires-python = ">=3.13"` allows any newer version, and there is no
+  `.python-version` file (mise is the source of truth). uv takes the first matching
+  interpreter, e.g. Homebrew's `python3` 3.14
+- **Fix:** `uv sync --python 3.13` (what `make install` does); the version is pinned in the
+  Makefile's `PYTHON` variable — keep it in sync with `mise.toml`
+
+### Makefile: inline comment adds trailing spaces to a variable
+- `PYTHON := 3.13  # comment` makes the value `"3.13  "` — make keeps the whitespace
+  before `#`. Put comments on their own line above the variable
 
 ### `docker` talks to Podman, not Docker Desktop
 - The `default` Docker context points to a Podman VM (`docker info` → Server Version 5.x,

@@ -3,6 +3,8 @@
 
 BACKEND := backend
 UV_RUN  := uv run --directory $(BACKEND)
+# Keep in sync with mise.toml
+PYTHON  := 3.13
 
 .DEFAULT_GOAL := help
 .PHONY: help install dev test lint fmt check db up down
@@ -10,9 +12,10 @@ UV_RUN  := uv run --directory $(BACKEND)
 help: ## Show available targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-8s\033[0m %s\n", $$1, $$2}'
 
-install: ## Install runtimes (mise), Python deps (uv), create .env if missing
-	mise install
-	uv sync --directory $(BACKEND)
+install: ## Install runtimes (mise, if present), Python deps (uv), create .env if missing
+	@if command -v mise >/dev/null 2>&1; then mise install; \
+	else echo "mise not found: uv will provide Python $(PYTHON)"; fi
+	uv sync --directory $(BACKEND) --python $(PYTHON)
 	@test -f .env || (cp .env.example .env && echo "Created .env from .env.example")
 
 dev: ## Run the API on the host with hot reload (:8000)
