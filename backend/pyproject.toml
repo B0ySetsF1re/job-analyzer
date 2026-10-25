@@ -4,8 +4,11 @@ version = "0.1.0"
 description = "Turns unstructured job postings into structured, typed data."
 requires-python = ">=3.13"
 dependencies = [
+    "alembic>=1.20.1",
     "fastapi>=0.161.1",
+    "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.16.1",
+    "sqlalchemy[asyncio]>=2.1.6",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -34,3 +37,22 @@ select = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]  # makes `import app` work without packaging the project
+
+[tool.alembic]
+script_location = "%(here)s/migrations"
+# Date-prefixed file names, so migrations sort chronologically in the file tree.
+file_template = "%%(year)d_%%(month).2d_%%(day).2d_%%(hour).2d%%(minute).2d-%%(rev)s_%%(slug)s"
+prepend_sys_path = ["."]
+
+# Lint + format every generated migration with ruff.
+[[tool.alembic.post_write_hooks]]
+name = "ruff_check"
+type = "module"
+module = "ruff"
+options = "check --fix REVISION_SCRIPT_FILENAME"
+
+[[tool.alembic.post_write_hooks]]
+name = "ruff_format"
+type = "module"
+module = "ruff"
+options = "format REVISION_SCRIPT_FILENAME"

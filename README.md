@@ -60,6 +60,7 @@ make install                                      # skips mise, runs uv sync --p
 
 ```bash
 make db                 # Postgres in Docker (waits until healthy)
+make migrate            # apply DB migrations
 make dev                # API on the host with hot reload
 ```
 
@@ -115,7 +116,8 @@ _More endpoints are added per phase (postings, profile, match, ask)._
 ## Docs
 
 - [Local development](docs/local-dev.md): toolchain (mise, uv), Docker Compose, dev container, gotchas
-- [Backend](docs/backend.md): project layout, `pyproject.toml`, app wiring, ruff, pytest
+- [Backend](docs/backend.md): project layout, `pyproject.toml`, Pydantic, app wiring, ruff, pytest
+- [Database](docs/database.md): SQLAlchemy, sessions, Alembic migrations
 
 ## Repo layout
 

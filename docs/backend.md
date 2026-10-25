@@ -17,13 +17,18 @@ backend/
     __init__.py
     main.py           # FastAPI() instance + router registration
     config.py         # Settings (pydantic-settings) + get_settings()
+    db.py             # SQLAlchemy engine/session/Base, see database.md
     api/
       __init__.py
       health.py       # GET /health
+    models/           # ORM models, see database.md
+  migrations/         # Alembic, see database.md
   tests/
     conftest.py       # shared fixtures (TestClient, settings override)
     test_config.py
+    test_db.py
     test_health.py
+  alembic.ini         # Alembic logging config
   pyproject.toml      # project metadata, dependencies, tool config
   uv.lock             # lockfile (committed)
   Dockerfile.dev      # dev container, see local-dev.md
@@ -60,6 +65,53 @@ commands run from `backend/` and pytest has `pythonpath = ["."]`.
   issues with pytest and type checkers, so the convention is to always add one
 - It *can* re-export names like a TS `index.ts` barrel; we don't do that
 - Committed (unlike `__pycache__/`, see [local-dev.md](local-dev.md#local-only-folders))
+
+---
+
+## Pydantic
+
+Data validation from type hints: a `BaseModel` subclass *is* the schema. NestJS parallel:
+class-validator + class-transformer DTOs; TS parallel: zod, but without a separate schema
+object (TS types vanish at runtime, Pydantic models don't).
+
+```python
+class PostingCreate(BaseModel):
+    source: str
+    text: str
+    min_salary: int | None = None
+
+PostingCreate(source="x", text="...", min_salary="90000")  # OK, coerced to 90000
+PostingCreate(source="x")                                  # ValidationError: text missing
+```
+
+- **Validates on construction** — missing/invalid fields raise `ValidationError`
+- **Coerces where safe** — `"90000"` → `int`, ISO string → `datetime`
+- **Serializes** — `model_dump()` / `model_dump_json()` (`instanceToPlain` parallel)
+- **Describes itself** — `model_json_schema()`; FastAPI's OpenAPI is built from this
+
+### Where it's used
+
+| Model | Role | NestJS parallel |
+|---|---|---|
+| `HealthResponse` | Response: validated, serialized, documented in OpenAPI | Response DTO + `@ApiResponse` |
+| `Settings` (pydantic-settings) | Env vars → typed, validated config | `@nestjs/config` + Joi |
+| Request models (`PostingCreate`, Phase 1) | JSON body → model; invalid input → automatic **422** | Request DTO + `ValidationPipe` |
+| `PostingExtraction` (Phase 1) | Schema the **LLM** must fill; PydanticAI sends it as JSON Schema, validates the answer and retries on failure | — |
+| Response models (`PostingRead`, Phase 1) | ORM object → API JSON via `model_validate(obj, from_attributes=True)` | `plainToInstance(Dto, entity)` |
+
+**Not used for DB tables** — those are SQLAlchemy models (see [database.md](database.md)).
+API shapes and tables change for different reasons, like DTOs vs TypeORM entities.
+
+### Data flow
+
+```
+HTTP JSON ──► Pydantic (PostingCreate) ──► handler ──► SQLAlchemy (Posting) ──► Postgres
+raw text  ──► LLM ──► Pydantic (PostingExtraction) ──► JSONB column
+Postgres  ──► SQLAlchemy (Posting) ──► Pydantic (PostingRead) ──► HTTP JSON
+```
+
+Pydantic is the boundary where untrusted data (HTTP input, env vars, LLM output) becomes
+typed, validated objects.
 
 ---
 

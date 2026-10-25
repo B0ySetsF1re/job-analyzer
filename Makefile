@@ -7,10 +7,10 @@ UV_RUN  := uv run --directory $(BACKEND)
 PYTHON  := 3.13
 
 .DEFAULT_GOAL := help
-.PHONY: help install dev test lint fmt check db up down
+.PHONY: help install dev test lint fmt check db migrate migration up down
 
 help: ## Show available targets
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-8s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
 
 install: ## Install runtimes (mise, if present), Python deps (uv), create .env if missing
 	@if command -v mise >/dev/null 2>&1; then mise install; \
@@ -36,6 +36,13 @@ check: lint test ## Lint + tests (run before committing)
 
 db: ## Start Postgres in Docker (waits until healthy)
 	docker compose up -d --wait postgres
+
+migrate: ## Apply all pending migrations (alembic upgrade head)
+	$(UV_RUN) alembic upgrade head
+
+migration: ## Autogenerate a migration from model changes: make migration MSG="add postings"
+	@test -n "$(MSG)" || (echo 'Usage: make migration MSG="describe the change"' && exit 1)
+	$(UV_RUN) alembic revision --autogenerate -m "$(MSG)"
 
 up: ## Start Postgres + API container with hot reload
 	docker compose --profile api up --build
