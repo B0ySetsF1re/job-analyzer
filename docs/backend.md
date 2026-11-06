@@ -24,10 +24,11 @@ backend/
     models/           # ORM models, see database.md
   migrations/         # Alembic, see database.md
   tests/
-    conftest.py       # shared fixtures (TestClient, settings override)
+    conftest.py       # shared fixtures (TestClient, settings override, test DB)
     test_config.py
     test_db.py
     test_health.py
+    test_migrations.py
   alembic.ini         # Alembic logging config
   pyproject.toml      # project metadata, dependencies, tool config
   uv.lock             # lockfile (committed)
@@ -221,8 +222,9 @@ Config in `[tool.pytest.ini_options]`: `testpaths = ["tests"]`, `pythonpath = ["
 | `uv run pytest -s` | Show `print()` output | — |
 | `uv run pytest --lf` | Rerun last failures | `--onlyFailures` |
 
-The `anyio` pytest plugin (installed with FastAPI) will run `async def` tests later — no
-`pytest-asyncio` needed.
+`async def` tests run through the `anyio` pytest plugin (installed with FastAPI, no
+`pytest-asyncio` needed): mark them `@pytest.mark.anyio`. DB fixtures and async tests are
+covered in [database.md](database.md#testing-with-the-database).
 
 ---
 

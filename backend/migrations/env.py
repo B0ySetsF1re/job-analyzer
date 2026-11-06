@@ -20,7 +20,10 @@ if config.config_file_name is not None:
 # Autogenerate compares this metadata (the models) with the live DB schema.
 target_metadata = Base.metadata
 
-DATABASE_URL = sqlalchemy_url(str(get_settings().database_url))
+# Tests pass the test DB URL via Config.attributes; normal CLI runs use app settings.
+DATABASE_URL = config.attributes.get("database_url") or sqlalchemy_url(
+    str(get_settings().database_url)
+)
 
 
 def run_migrations_offline() -> None:

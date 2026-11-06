@@ -110,6 +110,9 @@ backend/
     env.py                # how Alembic connects (DATABASE_URL) + what it diffs (Base.metadata)
     script.py.mako        # template for new migration files
     versions/             # the migrations themselves (committed)
+  tests/
+    conftest.py           # test DB fixtures: test_database_url, db_session
+    test_migrations.py    # fails if models and migrations differ
   alembic.ini             # Alembic logging config only
   pyproject.toml          # [tool.alembic]: script location, file names, ruff hooks
 ```
@@ -194,7 +197,63 @@ migration that alters or drops a constraint has no reliable name to refer to.
 
 ---
 
+## Testing with the Database
+
+DB tests run against a real Postgres. There is no SQLite or in-memory fake, because JSONB,
+`gen_random_uuid()` and CHECK constraints behave differently there or don't exist.
+`make test` runs `make db` first, so the container is always up.
+
+```
+pytest start (once)
+   └─ test_database_url: DROP + CREATE <db>_test → alembic upgrade head
+
+each test that asks for db_session
+   ├─ new connection → BEGIN
+   ├─ test runs; session.commit() only releases a SAVEPOINT
+   └─ ROLLBACK → the next test sees empty tables
+```
+
+| Fixture | Scope | What it gives you |
+|---|---|---|
+| `test_database_url` | session (once per run) | URL of a freshly migrated `job_analyzer_test` DB |
+| `db_session` | function (per test) | `AsyncSession` inside a transaction that is always rolled back |
+| `anyio_backend` | function | Makes `@pytest.mark.anyio` tests run on asyncio |
+
+```python
+@pytest.mark.anyio
+async def test_something(db_session: AsyncSession) -> None:
+    db_session.add(Posting(...))
+    await db_session.commit()   # fine: the outer transaction is still rolled back
+```
+
+- **Separate database, same server:** the name comes from `DATABASE_URL` plus `_test`, so
+  your dev data is never touched
+- **Schema built by the migrations, not `create_all()`.** Every test run proves the
+  migrations work on an empty database
+- **`test_migrations_match_models`** runs the same diff as `make migration`: test DB (from
+  migrations) vs models. It fails if you changed a model and forgot the migration
+- **`join_transaction_mode="create_savepoint"`** is SQLAlchemy's recipe for "joining a session
+  into an external transaction". NestJS parallel: a TypeORM `queryRunner` transaction started
+  in `beforeEach` and rolled back in `afterEach`
+- `pytest.mark.anyio` comes from the anyio plugin (installed with FastAPI). Jest runs
+  `async` tests natively; pytest needs this marker
+
+---
+
 ## Gotchas
+
+### DB tests fail with "connection refused" when run without make
+- `uv run pytest` doesn't start Postgres; `make test` does. Run `make db` once, then plain
+  pytest works too. Non-DB tests (health, config) don't need Postgres
+
+### `test_migrations_match_models` fails with `add_table` / `add_column` in the diff
+- You changed a model but have no migration for it: `make migration MSG="..."`, review the
+  file, rerun the tests. The diff in the message lists what's missing
+
+### "Failed: async def functions are not natively supported"
+- **Cause:** an `async def` test without the `@pytest.mark.anyio` marker. pytest itself
+  can't await coroutines; the anyio plugin only handles marked tests
+- **Fix:** add the marker (or `pytestmark = pytest.mark.anyio` at the top of the module)
 
 ### A new model isn't picked up by autogenerate
 - **Cause:** the model module isn't imported anywhere `env.py` can see, so its table never

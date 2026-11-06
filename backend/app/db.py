@@ -1,6 +1,6 @@
 """Database wiring: SQLAlchemy 2.0 async engine, sessions and the declarative base."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from functools import lru_cache
 
 from sqlalchemy import URL, MetaData, make_url
@@ -53,7 +53,7 @@ def get_sessionmaker() -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(get_engine(), expire_on_commit=False)
 
 
-async def get_session() -> AsyncIterator[AsyncSession]:
+async def get_session() -> AsyncGenerator[AsyncSession]:
     """FastAPI dependency: one session per request, closed afterwards.
 
     Usage: `session: Annotated[AsyncSession, Depends(get_session)]`.

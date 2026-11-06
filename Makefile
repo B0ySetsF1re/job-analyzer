@@ -21,7 +21,7 @@ install: ## Install runtimes (mise, if present), Python deps (uv), create .env i
 dev: ## Run the API on the host with hot reload (:8000)
 	$(UV_RUN) uvicorn app.main:app --reload
 
-test: ## Run backend tests; extra args via ARGS="-k health -x"
+test: db ## Run backend tests (starts Postgres first); extra args via ARGS="-k health -x"
 	$(UV_RUN) pytest $(ARGS)
 
 lint: ## Lint + format check (no changes)

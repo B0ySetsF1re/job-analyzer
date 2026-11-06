@@ -105,6 +105,22 @@ None of these are committed (all covered by `.gitignore`); all are safe to delet
 
 ---
 
+## Editor (VS Code)
+
+`.vscode/settings.json` is committed (a `.gitignore` exception, like `launch.json`) and
+holds only project settings. Personal ones (theme, font) belong in your user settings.
+
+- `python.defaultInterpreterPath` → `backend/.venv/bin/python`, so imports of installed
+  packages (`fastapi`, `alembic`, ...) resolve
+- `python.analysis.extraPaths: ["backend"]` → `from app...` imports resolve, even though
+  the workspace root is the repo, not `backend/`
+- pytest runs from `backend/` (`python.testing.cwd`), the same way `make test` does
+
+If imports still show as unresolved: Command Palette → "Python: Select Interpreter" →
+pick `backend/.venv`. A workspace that was opened earlier remembers its old choice.
+
+---
+
 ## Running the API
 
 ```bash

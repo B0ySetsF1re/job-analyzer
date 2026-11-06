@@ -39,6 +39,7 @@ infra/helm/**/charts/*.tgz
 .vscode/*
 !.vscode/launch.json
 !.vscode/extensions.json
+!.vscode/settings.json
 .DS_Store
 
 # --- Claude Code local settings ---
