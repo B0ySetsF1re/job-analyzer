@@ -106,6 +106,9 @@ backend/
     db.py                 # Base, engine, session factory, get_session dependency
     models/
       __init__.py         # imports every model module (registers tables on Base.metadata)
+      mixins.py           # UUID primary key + created_at/updated_at, shared by all tables
+      posting.py          # PostingStatus enum + Posting (table `postings`)
+      profile.py          # Profile (table `profiles`)
   migrations/
     env.py                # how Alembic connects (DATABASE_URL) + what it diffs (Base.metadata)
     script.py.mako        # template for new migration files
@@ -152,6 +155,54 @@ session: Annotated[AsyncSession, Depends(get_session)]
 `app/main.py` passes `lifespan=` to `FastAPI()`. It's an async context manager: code before
 `yield` runs on startup, code after runs on shutdown (NestJS `onModuleInit` /
 `onApplicationShutdown` in one function).
+
+---
+
+## Models
+
+```python
+class Posting(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "postings"
+
+    raw_text: Mapped[str] = mapped_column(Text)                     # NOT NULL
+    extraction: Mapped[dict[str, Any] | None] = mapped_column(JSONB)  # nullable
+```
+
+| SQLAlchemy | Meaning | TypeORM parallel |
+|---|---|---|
+| `Mapped[str]` / `Mapped[str \| None]` | Python type; also decides NOT NULL vs nullable | property type + `nullable` |
+| `mapped_column(Text, ...)` | SQL type and options; type optional when inferable | `@Column({ type: "text" })` |
+| `server_default=func.now()` | `DEFAULT now()` in the DDL; Postgres fills it in | `default: () => "now()"` |
+| `onupdate=func.now()` | SQLAlchemy adds `updated_at = now()` to its UPDATEs | `@UpdateDateColumn` |
+| Mixin class | Columns copied into every model that inherits it | Abstract base entity |
+| `sort_order=` | Column position (mixin columns otherwise go last) | — |
+
+### Tables
+
+| `postings` | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | PK, `gen_random_uuid()` |
+| `source` | `text` | Where it came from (`linkedin`, a URL, ...) |
+| `raw_text` | `text` | The posting as submitted |
+| `status` | `varchar(32)` + CHECK | `pending` (default) / `processed` / `failed` |
+| `extraction` | `jsonb`, nullable | `PostingExtraction` from the LLM; NULL until processed |
+| `error` | `text`, nullable | Why processing failed |
+| `created_at`, `updated_at` | `timestamptz` | `now()`; `updated_at` refreshed on every UPDATE |
+
+`profiles`: `id`, `raw_text` (the CV), `data` (parsed profile, nullable `jsonb`), timestamps.
+
+### Status: VARCHAR + CHECK, not a native ENUM
+`Enum(PostingStatus, native_enum=False, create_constraint=True, ...)` stores a plain string
+and adds `CHECK (status IN ('pending', 'processed', 'failed'))`. In Python it's still a
+`PostingStatus`. Chosen over `CREATE TYPE ... AS ENUM` because changing the allowed values
+later is a two-line, reversible migration (drop + recreate the constraint), while native
+enums can't drop values and `ALTER TYPE ... ADD VALUE` can't be undone. Neither is detected
+by autogenerate (see Gotchas).
+
+### `eager_defaults`
+`TimestampMixin` sets `__mapper_args__ = {"eager_defaults": True}`: DB-generated values come
+back via `RETURNING` on UPDATE as well, not only on INSERT. Otherwise `updated_at` is
+expired after an UPDATE and reading it raises `MissingGreenlet`.
 
 ---
 
@@ -302,6 +353,51 @@ async def test_something(db_session: AsyncSession) -> None:
   connection has already happened if the commit then fails
 - **Rule:** commit first, then trigger side effects (relevant in Phase 2: save the posting,
   then enqueue the Procrastinate job)
+
+### `Posting(...).status` is `None` before flush
+- **Cause:** `server_default` is applied by Postgres at INSERT time; the Python object has no
+  value until `flush()`/`commit()` returns it. Same for `id`, `created_at`, `updated_at`
+- **Fix:** flush before reading DB defaults (TypeORM behaves the same way before `save()`)
+
+### Enum column stores `"PENDING"` instead of `"pending"`
+- **Cause:** SQLAlchemy's `Enum` stores member **names** by default
+- **Fix:** `values_callable=lambda e: [m.value for m in e]`
+
+### Non-native `Enum` creates no CHECK constraint
+- **Cause:** `create_constraint` defaults to `False` (since SQLAlchemy 1.4), so any string is
+  accepted by the DB
+- **Fix:** `create_constraint=True` plus a `name=` (the naming convention builds
+  `ck_<table>_<name>` from it)
+
+### Adding a status value: autogenerate sees nothing
+- New `PostingStatus` member → no migration is generated, and the old CHECK rejects the new
+  value with `IntegrityError`. Write the migration by hand:
+  ```python
+  op.drop_constraint(op.f("ck_postings_posting_status"), "postings", type_="check")
+  op.create_check_constraint(
+      op.f("ck_postings_posting_status"),
+      "postings",
+      "status IN ('pending', 'processing', 'processed', 'failed')",
+  )
+  ```
+  Keep values ≤ 32 chars (`length=32`)
+
+### `op.drop_constraint(...)`: constraint "ck_postings_ck_postings_..." does not exist
+- **Cause:** in migrations, the naming convention is applied to names you pass to `op.*` too,
+  so a full name gets the prefix twice
+- **Fix:** wrap full names in `op.f("...")` ("final name, don't convert"). Autogenerate
+  already does this (`name=op.f("pk_postings")`)
+
+### Changing a key inside a JSONB dict isn't saved
+- `posting.extraction["company"] = "Acme"` mutates the dict in place; SQLAlchemy only tracks
+  attribute *assignment*, so no UPDATE is sent
+- **Fix:** assign a new dict: `posting.extraction = {**posting.extraction, "company": "Acme"}`
+  (or use `MutableDict.as_mutable(JSONB)` if in-place edits become common)
+
+### `created_at == updated_at` even after an update (in tests)
+- Postgres `now()` is the **transaction start** time. Insert and update in one transaction
+  (every test runs in one) get the same timestamp. Use `clock_timestamp()` if you ever need
+  wall-clock time
 
 ### `MissingGreenlet` / "greenlet_spawn has not been called"
 - **Cause:** something triggered implicit I/O in async code — usually accessing a lazy

@@ -200,7 +200,7 @@ job-analyzer/
 - [x] Settings via pydantic-settings + `.env.example`
 
 ### Phase 1 — Core pipeline
-- [ ] DB models + Alembic migrations (postings, profile)
+- [x] DB models + Alembic migrations (postings, profile)
 - [ ] `POST/GET/DELETE /postings`
 - [ ] PydanticAI extraction agent with `PostingExtraction` output (sync first)
 - [ ] `PUT/GET /profile`

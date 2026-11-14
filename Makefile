@@ -37,10 +37,10 @@ check: lint test ## Lint + tests (run before committing)
 db: ## Start Postgres in Docker (waits until healthy)
 	docker compose up -d --wait postgres
 
-migrate: ## Apply all pending migrations (alembic upgrade head)
+migrate: db ## Apply all pending migrations (starts Postgres first)
 	$(UV_RUN) alembic upgrade head
 
-migration: ## Autogenerate a migration from model changes: make migration MSG="add postings"
+migration: db ## Autogenerate a migration from model changes: make migration MSG="add postings"
 	@test -n "$(MSG)" || (echo 'Usage: make migration MSG="describe the change"' && exit 1)
 	$(UV_RUN) alembic revision --autogenerate -m "$(MSG)"
 
