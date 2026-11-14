@@ -31,6 +31,11 @@ def get_test_settings() -> Settings:
 
 @pytest.fixture
 def client() -> Generator[TestClient]:
+    """`TestClient` for the app, with test settings injected.
+
+    The `with` block runs the app's lifespan (startup/shutdown). Overrides live on the
+    global `app`, so they're cleared afterwards.
+    """
     app.dependency_overrides[get_settings] = get_test_settings
 
     with TestClient(app) as c:

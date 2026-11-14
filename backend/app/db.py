@@ -48,8 +48,11 @@ def get_engine() -> AsyncEngine:
 
 @lru_cache
 def get_sessionmaker() -> async_sessionmaker[AsyncSession]:
-    # expire_on_commit=False: objects stay readable after commit (no implicit reload),
-    # which matters in async code where lazy attribute loads aren't allowed.
+    """Factory for `AsyncSession` objects, bound to the process-wide engine.
+
+    `expire_on_commit=False`: objects stay readable after commit (no implicit reload),
+    which matters in async code where lazy attribute loads aren't allowed.
+    """
     return async_sessionmaker(get_engine(), expire_on_commit=False)
 
 

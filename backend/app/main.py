@@ -11,7 +11,10 @@ from app.db import dispose_engine
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
-    # Startup code goes before `yield`, shutdown code after.
+    """App startup/shutdown hook: code before `yield` runs on startup, after it on shutdown.
+
+    On shutdown it closes the DB connection pool.
+    """
     yield
     await dispose_engine()
 

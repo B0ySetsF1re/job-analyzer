@@ -78,7 +78,8 @@ def make_posting(**overrides: object) -> Posting:
     """
 ```
 
-- **App code (`app/`):** every module, public function and public class has one
+- **App code (`app/`):** every module, public function and public class has one. Empty
+  `__init__.py` files (package markers) don't
 - **Tests:** only when the name doesn't say *why*: a regression guard, a non-obvious setup,
   a deliberate trick (raw SQL, `expunge_all()`). `test_health_returns_ok_and_env` needs none
 - **No types in docstrings:** they're in the signature already. `Args:` / `Returns:` /

@@ -11,6 +11,8 @@ router = APIRouter(tags=["health"])
 
 
 class HealthResponse(BaseModel):
+    """Response body of `GET /health`."""
+
     status: Literal["ok"]
     env: AppEnv
 

@@ -11,6 +11,9 @@ from app.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class Profile(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """The user's CV: `raw_text` as uploaded, `data` the structured profile parsed from it
+    (NULL until parsed)."""
+
     __tablename__ = "profiles"
 
     raw_text: Mapped[str] = mapped_column(Text)

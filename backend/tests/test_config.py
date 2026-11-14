@@ -27,6 +27,7 @@ def test_app_env_defaults_to_dev(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_missing_database_url_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`database_url` has no default: a missing value fails at load time, not on first use."""
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
     with pytest.raises(ValidationError, match="database_url"):

@@ -21,6 +21,12 @@ class PostingStatus(StrEnum):
 
 
 class Posting(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """One submitted job posting.
+
+    `status` tracks processing (`pending` → `processed` / `failed`). Once processed,
+    `extraction` holds the LLM's structured result; if processing failed, `error` says why.
+    """
+
     __tablename__ = "postings"
 
     source: Mapped[str] = mapped_column(Text)
@@ -31,10 +37,10 @@ class Posting(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Enum(
             PostingStatus,
             name="posting_status",
-            native_enum=False,
-            create_constraint=True,
-            length=32,
-            values_callable=lambda e: [m.value for m in e],
+            native_enum=False,  # VARCHAR + CHECK, not CREATE TYPE ... AS ENUM
+            create_constraint=True,  # off by default: without it there is no CHECK
+            length=32,  # room for new values (default = longest current value)
+            values_callable=lambda e: [m.value for m in e],  # store "pending", not "PENDING"
         ),
         server_default=PostingStatus.PENDING.value,
     )

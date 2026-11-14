@@ -16,6 +16,12 @@ type AppEnv = Literal["dev", "test", "prod"]
 
 
 class Settings(BaseSettings):
+    """Typed app configuration, validated when it's created.
+
+    Field names map to env vars case-insensitively (`database_url` ← `DATABASE_URL`).
+    Priority: constructor kwargs → env vars → repo-root `.env` → field defaults.
+    """
+
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
         env_file_encoding="utf-8",
