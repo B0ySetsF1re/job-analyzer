@@ -13,6 +13,10 @@ When helping:
 - Keep things simple; this is a time-boxed project. Working end-to-end > polished.
 
 ### Working mode (learning project)
+- **Ask before changing anything.** Before editing or creating files (code, docs,
+  config), show what you plan to change and wait for the author's explicit go-ahead.
+  An explicit request for a specific change ("add X to Y") counts as the go-ahead for
+  that change only. Reading files, analysis and read-only commands need no confirmation.
 - The author reviews every change thoroughly and finishes key parts by hand
   (routers, DB logic, agents, tools) to learn the stack. For these, use
   **scaffold + TODO** mode:
