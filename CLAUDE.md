@@ -8,7 +8,8 @@ coming from a NestJS/TypeScript background. The author is a senior backend engin
 
 When helping:
 - Explain Python/FastAPI concepts via NestJS/TypeScript parallels where useful.
-- Prefer idiomatic, modern Python (3.12+, type hints everywhere, async).
+- Prefer idiomatic, modern Python (3.12+, type hints everywhere, async); follow
+  `docs/conventions.md`.
 - Keep things simple; this is a time-boxed project. Working end-to-end > polished.
 
 ### Working mode (learning project)
@@ -41,26 +42,25 @@ Topic docs live in `docs/`, one file per area (Overview → Structure → topics
   app wiring, ruff and pytest. Read it before changing project structure or tooling config.
 - `docs/database.md` covers SQLAlchemy engine/sessions, `get_session`, Alembic config and
   the migration workflow. Read it before touching `app/db.py`, models or `migrations/`.
+- `docs/conventions.md` holds the coding and commit rules (Shared → Backend). Follow it
+  when writing or reviewing code.
 
 Rules:
 - When a non-obvious issue comes up, add it to the relevant doc's **Gotchas** section
   (symptom/cause → fix) in the same change.
+- When we agree on a new convention, add it to `docs/conventions.md` in the same change.
+- Split `docs/conventions.md` by scope once it grows large (rule of thumb: ~300 lines, or
+  when the frontend gets its own rules): `docs/conventions/README.md` (shared rules),
+  `backend.md`, `frontend.md`, and so on for other scopes. Move sections as they are and
+  update every link to them (CLAUDE.md, README, other docs).
 - Create a new doc only when its phase starts; no placeholder files.
 
 ### Git
 - **Never commit (or push) unless explicitly asked.** The author commits by default;
   when a step is done, stop and suggest a commit message instead.
-- All commit messages follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/):
-  `<type>(<scope>): <description>`
-  - Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, `style`, `revert`.
-  - Scopes: `backend`, `frontend`, `infra`, `helm`, `terraform`, `deps`, or omit for repo-wide changes.
-  - Description: imperative, all lowercase (tool names too), no trailing period
-    (`add health endpoint`, not `Added ...`).
-  - Keep it general: describe the capability, not the libraries
-    (`add async orm and migrations setup`, not `add SQLAlchemy and Alembic setup`).
-    Specifics go in the optional body.
-  - Breaking changes: `!` after type/scope and/or a `BREAKING CHANGE:` footer.
-  - Optional body (what/why) after a blank line; footers last.
+- Commit messages follow the rules in `docs/conventions.md#git` (Conventional Commits,
+  all lowercase, general subject, specifics in the body). Suggest them in the
+  `git commit -m "subject" -m "body"` form.
 
 ### Toolchain (mise + uv)
 - **mise** manages runtime versions (Python 3.13, Node.js, uv, later terraform/kubectl/helm)

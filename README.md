@@ -6,7 +6,7 @@ and lets you compare postings against your CV and ask natural-language questions
 The LLM converts messy text into validated Pydantic models; everything after that is
 ordinary code and SQL.
 
-> Status: early development (Phase 0 — local environment).
+> Status: early development (Phase 1 — core pipeline).
 
 ## Stack
 
@@ -117,7 +117,8 @@ _More endpoints are added per phase (postings, profile, match, ask)._
 
 - [Local development](docs/local-dev.md): toolchain (mise, uv), Docker Compose, dev container, gotchas
 - [Backend](docs/backend.md): project layout, `pyproject.toml`, Pydantic, app wiring, ruff, pytest
-- [Database](docs/database.md): SQLAlchemy, sessions, Alembic migrations
+- [Database](docs/database.md): SQLAlchemy, sessions, Alembic migrations, models, testing with the DB
+- [Conventions](docs/conventions.md): coding, docstring, test and commit rules
 
 ## Repo layout
 
