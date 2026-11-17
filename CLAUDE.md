@@ -37,6 +37,18 @@ When helping:
 - Briefly explain non-obvious Python idioms and library choices in each change.
 - Update the checklists in the Plan section when a step is done.
 
+### Response style
+- **Keep replies short.** Give the answer or plan, not the full reasoning; add details
+  only when the author asks. Implementation details belong in the TODO hints, not in chat.
+- **Open questions go under a `## Decisions` heading**, as a numbered list. Keep
+  answered ones in the list as reminders, marked `[Answered]`, without repeating the answer:
+  ```
+  ## Decisions
+  1. [Answered] Schemas folder
+  2. `str_enum` helper: yes / no?
+  ```
+- Refer to topics by name, not by the number of a previous list.
+
 ### Docs
 Topic docs live in `docs/`, one file per area (Overview → Structure → topics → Gotchas):
 - `docs/local-dev.md` covers mise, uv, local-only folders, running the API, Docker Compose
