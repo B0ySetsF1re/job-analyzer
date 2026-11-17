@@ -28,6 +28,8 @@ services:
     environment:
       # Overrides DATABASE_URL from .env: inside the compose network the host is `postgres`.
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres:5432/${POSTGRES_DB:-job_analyzer}
+      # The container has no .env file (only app/ is mounted), so secrets are passed explicitly.
+      JWT_SECRET: ${JWT_SECRET}
       # File events don't cross the macOS VM boundary reliably (Podman/Docker Desktop); poll instead.
       WATCHFILES_FORCE_POLLING: "true"
     ports:

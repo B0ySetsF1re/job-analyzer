@@ -118,6 +118,7 @@ _More endpoints are added per phase (postings, profile, match, ask)._
 - [Local development](docs/local-dev.md): toolchain (mise, uv), Docker Compose, dev container, gotchas
 - [Backend](docs/backend.md): project layout, `pyproject.toml`, Pydantic, app wiring, ruff, pytest
 - [Database](docs/database.md): SQLAlchemy, sessions, Alembic migrations, models, testing with the DB
+- [Auth](docs/auth.md): password hashing, JWT access tokens, invite codes
 - [Conventions](docs/conventions.md): coding, docstring, test and commit rules
 
 ## Repo layout

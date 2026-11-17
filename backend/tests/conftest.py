@@ -25,8 +25,15 @@ def get_test_settings() -> Settings:
     return Settings(
         app_env="test",
         database_url="postgresql://test:test@localhost:5432/test",
+        jwt_secret="test-secret-that-is-at-least-32-characters",
         _env_file=None,
     )
+
+
+@pytest.fixture
+def settings() -> Settings:
+    """The test settings, for code that takes `Settings` as a plain argument."""
+    return get_test_settings()
 
 
 @pytest.fixture

@@ -9,6 +9,12 @@ from app.config import Settings
 DB_URL = "postgresql://user:pass@localhost:5432/db"
 
 
+@pytest.fixture(autouse=True)
+def jwt_secret_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`jwt_secret` is required too; set it so each test only varies what it checks."""
+    monkeypatch.setenv("JWT_SECRET", "x" * 32)
+
+
 def test_reads_values_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "prod")
     monkeypatch.setenv("DATABASE_URL", DB_URL)
@@ -39,6 +45,7 @@ def test_missing_database_url_fails(monkeypatch: pytest.MonkeyPatch) -> None:
     [
         ("APP_ENV", "staging"),  # not in the Literal
         ("DATABASE_URL", "mysql://user:pass@localhost/db"),  # wrong scheme
+        ("JWT_SECRET", "too-short"),  # under 32 chars
     ],
 )
 def test_rejects_invalid_values(monkeypatch: pytest.MonkeyPatch, name: str, value: str) -> None:

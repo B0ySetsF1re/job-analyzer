@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import PostgresDsn
+from pydantic import Field, PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/app/config.py → parents[2] is the repo root. Resolved from this file, not the
@@ -30,6 +30,11 @@ class Settings(BaseSettings):
 
     app_env: AppEnv = "dev"
     database_url: PostgresDsn  # required: no default, startup fails if missing
+
+    # HS256 signing key for access tokens. `SecretStr` prints as `**********` in logs and
+    # reprs; read it with `.get_secret_value()`. 32+ chars, so a weak key fails at startup.
+    jwt_secret: SecretStr = Field(min_length=32)
+    jwt_expires_minutes: int = 60 * 24  # 1 day; no refresh tokens yet
 
 
 @lru_cache

@@ -98,6 +98,8 @@ def make_posting(**overrides: object) -> Posting:
 - **Pydantic schemas are separate from ORM models.** API shapes (`PostingCreate`,
   `PostingRead`) are Pydantic; tables are SQLAlchemy. See [backend.md](backend.md#pydantic)
 - **Settings only through `get_settings()`**, never `os.environ` directly
+- **Secrets are `SecretStr` settings** (`jwt_secret`), so they never show up in logs or
+  tracebacks. Read them with `.get_secret_value()` only where they're used
 
 ### Database
 Details and reasons: [database.md](database.md).

@@ -58,6 +58,8 @@ Topic docs live in `docs/`, one file per area (Overview → Structure → topics
   app wiring, ruff and pytest. Read it before changing project structure or tooling config.
 - `docs/database.md` covers SQLAlchemy engine/sessions, `get_session`, Alembic config and
   the migration workflow. Read it before touching `app/db.py`, models or `migrations/`.
+- `docs/auth.md` covers password hashing, JWT access tokens, invite codes, auth settings
+  and (later) `get_current_user` / RBAC. Read it before touching `app/security.py` or auth.
 - `docs/conventions.md` holds the coding and commit rules (Shared → Backend). Follow it
   when writing or reviewing code.
 
