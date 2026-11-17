@@ -44,15 +44,16 @@ script_location = "%(here)s/migrations"
 file_template = "%%(year)d_%%(month).2d_%%(day).2d_%%(hour).2d%%(minute).2d-%%(rev)s_%%(slug)s"
 prepend_sys_path = ["."]
 
-# Lint + format every generated migration with ruff.
-[[tool.alembic.post_write_hooks]]
-name = "ruff_check"
-type = "module"
-module = "ruff"
-options = "check --fix REVISION_SCRIPT_FILENAME"
-
+# Format + lint every generated migration with ruff. Format first: it wraps the long
+# lines autogenerate writes, so the check only reports real issues.
 [[tool.alembic.post_write_hooks]]
 name = "ruff_format"
 type = "module"
 module = "ruff"
 options = "format REVISION_SCRIPT_FILENAME"
+
+[[tool.alembic.post_write_hooks]]
+name = "ruff_check"
+type = "module"
+module = "ruff"
+options = "check --fix REVISION_SCRIPT_FILENAME"
