@@ -12,7 +12,7 @@ ordinary code and SQL.
 
 - **Backend:** Python 3.13, uv, FastAPI, Pydantic v2, PydanticAI, SQLAlchemy 2.0 (async),
   Alembic, Postgres, Procrastinate, OpenTelemetry
-- **Frontend (optional):** React + Vite + TypeScript, client generated from OpenAPI
+- **Frontend:** React + Vite + TypeScript, client generated from OpenAPI
 - **Infra:** Docker Compose (local), Helm + Kubernetes, Terraform (AWS: EKS, ECR, S3 + CloudFront)
 
 ## Architecture
@@ -126,6 +126,6 @@ _More endpoints are added per phase (postings, profile, match, ask)._
 ```
 backend/    FastAPI app, agents, tasks, migrations, tests
 docs/       topic docs
-frontend/   React client (optional)
+frontend/   React client (Phase 5)
 infra/      Terraform + Helm
 ```

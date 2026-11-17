@@ -187,7 +187,7 @@ PyJWT, pwdlib (argon2), OpenTelemetry, ruff, pytest.
   `expires_at`.
 
 **Frontend** (`frontend/`): React + Vite + TypeScript, pnpm, generated API client
-(openapi-typescript or orval). Optional — only after the backend pipeline works.
+(openapi-typescript or orval). Phase 5, after Kubernetes; kept small (the focus is backend + infra).
 
 **LLM provider**: TBD (Anthropic / OpenAI / Ollama). Keep it configurable via env vars;
 PydanticAI is provider-agnostic.
@@ -261,11 +261,15 @@ job-analyzer/
 - [ ] Dockerfiles (api, worker), Helm chart
 - [ ] Deploy to local cluster (kind or k3d)
 
-### Phase 5 — AWS (stretch)
+### Phase 5 — Frontend (small, time-boxed: ~2–3 sessions)
+- [ ] React + Vite app with the TS client generated from OpenAPI (`make gen-client`)
+- [ ] Login, postings list + details, profile upload, ask box; no design polish
+
+### Phase 6 — AWS (stretch)
 - [ ] Terraform: VPC, EKS (terraform-aws-modules/eks), ECR, S3 + CloudFront
-- [ ] Deploy; tear down with `terraform destroy` after demo (EKS costs money)
+- [ ] Deploy; tear down with `terraform destroy` after demo (EKS bills ~$0.25–0.30/h
+      while up; there is no "stop"). Set an AWS Budgets alert before the first deploy
 
 ### Optional
 - [ ] Screenshot input (multipart, vision model)
-- [ ] React frontend with generated client
 - [ ] Auth extras: httpOnly cookie transport, refresh tokens
