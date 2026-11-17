@@ -107,8 +107,11 @@ backend/
     models/
       __init__.py         # imports every model module (registers tables on Base.metadata)
       mixins.py           # UUID primary key + created_at/updated_at, shared by all tables
+      types.py            # str_enum(): VARCHAR + CHECK column type for StrEnums
       posting.py          # PostingStatus enum + Posting (table `postings`)
       profile.py          # Profile (table `profiles`)
+      user.py             # UserRole enum + User (table `users`)
+      invite.py           # Invite (table `invites`)
   migrations/
     env.py                # how Alembic connects (DATABASE_URL) + what it diffs (Base.metadata)
     script.py.mako        # template for new migration files
@@ -174,6 +177,8 @@ class Posting(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 | `mapped_column(Text, ...)` | SQL type and options; type optional when inferable | `@Column({ type: "text" })` |
 | `server_default=func.now()` | `DEFAULT now()` in the DDL; Postgres fills it in | `default: () => "now()"` |
 | `onupdate=func.now()` | SQLAlchemy adds `updated_at = now()` to its UPDATEs | `@UpdateDateColumn` |
+| `unique=True` | UNIQUE constraint (`uq_<table>_<column>`) | `@Column({ unique: true })` |
+| `ForeignKey("users.id", ondelete="SET NULL")` | FK constraint; column type comes from the target | `@ManyToOne(..., { onDelete })` + `@JoinColumn` |
 | Mixin class | Columns copied into every model that inherits it | Abstract base entity |
 | `sort_order=` | Column position (mixin columns otherwise go last) | — |
 
@@ -191,8 +196,27 @@ class Posting(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 `profiles`: `id`, `raw_text` (the CV), `data` (parsed profile, nullable `jsonb`), timestamps.
 
+| `users` | Type | Notes |
+|---|---|---|
+| `email` | `text`, unique | Stored lowercased (normalized by the API schemas) |
+| `password_hash` | `text` | argon2 hash, never the password |
+| `role` | `varchar(32)` + CHECK | `user` (default) / `admin` |
+| `is_active` | `boolean` | Default `true`; `false` blocks login without deleting |
+
+| `invites` | Type | Notes |
+|---|---|---|
+| `code_hash` | `text`, unique | SHA-256 of the code; the plain code is shown once |
+| `email` | `text` | The invited address; not unique (re-invite after expiry) |
+| `created_by` | `uuid`, nullable | FK → `users`, `ON DELETE SET NULL` |
+| `expires_at` | `timestamptz` | Set by the app |
+| `used_at` / `used_by` | nullable | Set on redeem; `used_by` FK → `users`, `ON DELETE SET NULL` |
+
+Invite status is derived: `used_at` set → used; `expires_at` past → expired; else pending.
+SET NULL (not CASCADE) keeps invites as an audit record when a user is deleted.
+
 ### Status: VARCHAR + CHECK, not a native ENUM
-`Enum(PostingStatus, native_enum=False, create_constraint=True, ...)` stores a plain string
+`str_enum(PostingStatus, name="posting_status")` (in `app/models/types.py`) builds
+`Enum(PostingStatus, native_enum=False, create_constraint=True, ...)`. It stores a plain string
 and adds `CHECK (status IN ('pending', 'processed', 'failed'))`. In Python it's still a
 `PostingStatus`. Chosen over `CREATE TYPE ... AS ENUM` because changing the allowed values
 later is a two-line, reversible migration (drop + recreate the constraint), while native
@@ -399,6 +423,10 @@ async def test_something(db_session: AsyncSession) -> None:
   (every test runs in one) get the same timestamp. Use `clock_timestamp()` if you ever need
   wall-clock time
 
+### FK column still holds the old id after `ON DELETE SET NULL`
+- **Cause:** Postgres clears the column, not SQLAlchemy; a loaded object keeps its old value
+- **Fix:** `await session.refresh(obj)` to read the row again (or `expunge_all()` and reload)
+
 ### `MissingGreenlet` / "greenlet_spawn has not been called"
 - **Cause:** something triggered implicit I/O in async code — usually accessing a lazy
   relationship or an expired attribute
@@ -409,6 +437,8 @@ async def test_something(db_session: AsyncSession) -> None:
 - Postgres isn't running: `make db` first. Migrations run from the host, so they use
   `DATABASE_URL` from `.env` (host `localhost`)
 
-### `ruff check` reports "1 remaining" while generating a migration
-- Harmless: the `ruff_check` hook runs before `ruff_format`, and the remaining issue
-  (template whitespace) is fixed by the format hook right after
+### `make migration` fails with "Target database is not up to date"
+- **Cause:** the dev DB isn't at the latest revision (e.g. the Postgres volume was
+  recreated). Autogenerate diffs models against the DB, so it refuses to run
+- **Fix:** `make migrate` first, then `make migration MSG="..."`. Check with
+  `uv run alembic current` (empty output = no migrations applied)

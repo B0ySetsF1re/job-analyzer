@@ -116,8 +116,8 @@ Details and reasons: [database.md](database.md).
 - **Defaults live in the database** (`server_default=`), so raw SQL and other services
   get them too
 - **Strings are `Text`**, unless the database must enforce a length
-- **Status-like columns are VARCHAR + CHECK:** `Enum(..., native_enum=False,
-  create_constraint=True, values_callable=..., name=...)`, not native Postgres enums.
+- **Status-like columns are VARCHAR + CHECK** via `str_enum(MyEnum, name="...")` from
+  `app/models/types.py`, not native Postgres enums.
   See [database.md](database.md#status-varchar--check-not-a-native-enum)
 - **LLM output goes into JSONB.** A field gets its own column only when filtering or
   indexing needs it

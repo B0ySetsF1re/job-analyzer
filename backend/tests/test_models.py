@@ -6,14 +6,17 @@ so they check what Postgres actually does: server defaults, the CHECK constraint
 """
 
 import uuid
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.invite import Invite
 from app.models.posting import Posting, PostingStatus
 from app.models.profile import Profile
+from app.models.user import User, UserRole
 
 pytestmark = pytest.mark.anyio
 
@@ -138,3 +141,90 @@ async def test_posting_updated_at_is_readable_after_update(db_session: AsyncSess
     await db_session.flush()  # UPDATE ... RETURNING updated_at
 
     assert posting.updated_at.tzinfo is not None
+
+
+# --- Users and invites ----------------------------------------------------------------------
+
+
+def make_user(**overrides: object) -> User:
+    """Build an unsaved `User` with valid required fields.
+
+    The default email is random, so several users can be created in one test.
+    """
+    fields: dict[str, object] = {
+        "email": f"user-{uuid.uuid4().hex[:8]}@example.com",
+        "password_hash": "$argon2id$fake-hash",
+    }
+    return User(**(fields | overrides))
+
+
+def make_invite(**overrides: object) -> Invite:
+    """Build an unsaved, pending `Invite` that expires in 7 days.
+
+    The default `code_hash` is random, so several invites can be created in one test.
+    """
+    fields: dict[str, object] = {
+        "code_hash": uuid.uuid4().hex,
+        "email": "invitee@example.com",
+        "expires_at": datetime.now(UTC) + timedelta(days=7),
+    }
+    return Invite(**(fields | overrides))
+
+
+async def test_user_gets_db_defaults_on_flush(db_session: AsyncSession) -> None:
+    user = make_user()
+    db_session.add(user)
+    await db_session.flush()
+
+    assert isinstance(user.id, uuid.UUID)
+    assert user.role == UserRole.USER
+    assert user.is_active is True
+
+
+async def test_user_email_is_unique(db_session: AsyncSession) -> None:
+    db_session.add_all([make_user(email="alice@example.com"), make_user(email="alice@example.com")])
+
+    with pytest.raises(IntegrityError, match="uq_users_email"):
+        await db_session.flush()
+
+
+async def test_user_role_rejects_unknown_values(db_session: AsyncSession) -> None:
+    """Raw SQL bypasses the Python enum, so only the CHECK constraint can stop the value."""
+    with pytest.raises(IntegrityError, match="ck_users_user_role"):
+        await db_session.execute(
+            text(
+                "insert into users (email, password_hash, role) "
+                "values ('bob@example.com', 'hash', 'superuser')"
+            )
+        )
+
+
+async def test_invite_code_hash_is_unique(db_session: AsyncSession) -> None:
+    db_session.add_all([make_invite(code_hash="same"), make_invite(code_hash="same")])
+
+    with pytest.raises(IntegrityError, match="uq_invites_code_hash"):
+        await db_session.flush()
+
+
+async def test_deleting_user_keeps_invite_and_clears_references(db_session: AsyncSession) -> None:
+    """`ON DELETE SET NULL`: the invite survives as an audit record.
+
+    The database clears the FK columns, not SQLAlchemy, so the loaded `invite` object
+    still holds the old ids until `refresh()` reads the row again.
+    """
+    admin, invitee = make_user(), make_user()
+    db_session.add_all([admin, invitee])
+    await db_session.flush()
+
+    invite = make_invite(created_by=admin.id, used_by=invitee.id, used_at=datetime.now(UTC))
+    db_session.add(invite)
+    await db_session.flush()
+
+    await db_session.delete(admin)
+    await db_session.delete(invitee)
+    await db_session.flush()
+    await db_session.refresh(invite)
+
+    assert invite.created_by is None
+    assert invite.used_by is None
+    assert invite.used_at is not None

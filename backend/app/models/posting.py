@@ -3,12 +3,13 @@
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import Enum, Text
+from sqlalchemy import Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
 from app.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
+from app.models.types import str_enum
 
 
 class PostingStatus(StrEnum):
@@ -34,14 +35,7 @@ class Posting(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     raw_text: Mapped[str] = mapped_column(Text)
 
     status: Mapped[PostingStatus] = mapped_column(
-        Enum(
-            PostingStatus,
-            name="posting_status",
-            native_enum=False,  # VARCHAR + CHECK, not CREATE TYPE ... AS ENUM
-            create_constraint=True,  # off by default: without it there is no CHECK
-            length=32,  # room for new values (default = longest current value)
-            values_callable=lambda e: [m.value for m in e],  # store "pending", not "PENDING"
-        ),
+        str_enum(PostingStatus, name="posting_status"),
         server_default=PostingStatus.PENDING.value,
     )
 
