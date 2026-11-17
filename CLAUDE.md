@@ -48,6 +48,8 @@ When helping:
   2. `str_enum` helper: yes / no?
   ```
 - Refer to topics by name, not by the number of a previous list.
+- **When reporting changes, list every file touched**, even in the short format:
+  `- <what changed>; <file>, <file>` (files as clickable links).
 
 ### Docs
 Topic docs live in `docs/`, one file per area (Overview → Structure → topics → Gotchas):
