@@ -61,6 +61,17 @@ Commit messages follow [Conventional Commits 1.0.0](https://www.conventionalcomm
 - **Singletons via `@lru_cache`** on a zero-argument getter (`get_settings`, `get_engine`),
   not module-level instances. *Why:* created lazily, and tests can call `.cache_clear()`
 - **No code after `return`** and no leftover `...` placeholders once a TODO is done
+- **`is None` for optional values** (`T | None` used for defaults or branching). `not x`
+  only for real bools, guards that reject anything empty, and "empty counts as missing"
+  (`if not items:`). *Why:* `not x` is also true for `0`, `""` and `[]`
+  ```python
+  ✅ if salary_min is None: salary_min = default
+  ❌ if not salary_min: salary_min = default   # an explicit 0 gets replaced
+  ```
+- **Barrel `__init__.py` only in `app/schemas/`:** it re-exports every schema and lists
+  them in `__all__`; import as `from app.schemas import UserRead`. Other packages import
+  modules directly (`from app.models.user import User`). *Why:* schemas are a leaf package;
+  barrels elsewhere invite circular imports and load more than needed
 
 ### Docstrings
 Google style. The first line is a one-sentence summary (shown in IDE hovers); details
@@ -96,7 +107,15 @@ def make_posting(**overrides: object) -> Posting:
 - **Handlers are `async def`**, and never call blocking I/O (ruff's `ASYNC` rules catch
   the common cases)
 - **Pydantic schemas are separate from ORM models.** API shapes (`PostingCreate`,
-  `PostingRead`) are Pydantic; tables are SQLAlchemy. See [backend.md](backend.md#pydantic)
+  `PostingRead`) are Pydantic in `app/schemas/<resource>.py`; tables are SQLAlchemy in
+  `app/models/`. See [backend.md](backend.md#pydantic)
+- **Shared dependencies live in `app/api/deps.py`** (`SessionDep`, `SettingsDep`,
+  `CurrentUser`). Every route except the public ones takes `user: CurrentUser`
+- **Auth failures are generic:** one message per endpoint (`400` for any invite problem,
+  `401` for any login or token problem), so responses don't reveal which check failed.
+  See [auth.md](auth.md#endpoints)
+- **CPU-heavy calls go through `await run_in_threadpool(fn, *args)`** (argon2 hashing and
+  verifying), so they don't block the event loop
 - **Settings only through `get_settings()`**, never `os.environ` directly
 - **Secrets are `SecretStr` settings** (`jwt_secret`), so they never show up in logs or
   tracebacks. Read them with `.get_secret_value()` only where they're used

@@ -18,17 +18,25 @@ backend/
     main.py           # FastAPI() instance + router registration
     config.py         # Settings (pydantic-settings) + get_settings()
     db.py             # SQLAlchemy engine/session/Base, see database.md
+    security.py       # password hashing, JWT, invite codes, see auth.md
     api/
       __init__.py
+      deps.py         # SessionDep, SettingsDep, CurrentUser
       health.py       # GET /health
-    models/           # ORM models, see database.md
+      auth.py         # /auth: register, login, me
+    models/           # SQLAlchemy models, see database.md
+    schemas/          # Pydantic request/response schemas (barrel __init__.py)
+      auth.py
   migrations/         # Alembic, see database.md
   tests/
-    conftest.py       # shared fixtures (TestClient, settings override, test DB)
+    conftest.py       # shared fixtures (client, api_client, settings, test DB)
+    test_auth_api.py
     test_config.py
     test_db.py
     test_health.py
     test_migrations.py
+    test_models.py
+    test_security.py
   alembic.ini         # Alembic logging config
   pyproject.toml      # project metadata, dependencies, tool config
   uv.lock             # lockfile (committed)
@@ -96,9 +104,9 @@ PostingCreate(source="x")                                  # ValidationError: te
 |---|---|---|
 | `HealthResponse` | Response: validated, serialized, documented in OpenAPI | Response DTO + `@ApiResponse` |
 | `Settings` (pydantic-settings) | Env vars → typed, validated config | `@nestjs/config` + Joi |
-| Request models (`PostingCreate`, Phase 1) | JSON body → model; invalid input → automatic **422** | Request DTO + `ValidationPipe` |
+| Request models (`RegisterRequest`, `LoginRequest`) | JSON body → model; invalid input → automatic **422** | Request DTO + `ValidationPipe` |
 | `PostingExtraction` (Phase 1) | Schema the **LLM** must fill; PydanticAI sends it as JSON Schema, validates the answer and retries on failure | — |
-| Response models (`PostingRead`, Phase 1) | ORM object → API JSON via `model_validate(obj, from_attributes=True)` | `plainToInstance(Dto, entity)` |
+| Response models (`UserRead`, `TokenResponse`) | ORM object → API JSON via `UserRead.model_validate(user)` (`from_attributes=True` in the model config) | `plainToInstance(Dto, entity)` |
 
 **Not used for DB tables** — those are SQLAlchemy models (see [database.md](database.md)).
 API shapes and tables change for different reasons, like DTOs vs TypeORM entities.
@@ -208,7 +216,13 @@ Config in `[tool.pytest.ini_options]`: `testpaths = ["tests"]`, `pythonpath = ["
 - A test requests a fixture by **parameter name**: `def test_x(client: TestClient)`
 - `yield` splits setup from teardown — `beforeEach` + `afterEach` in one function
 - The `client` fixture wraps `TestClient(app)` in `with`, which runs the app's
-  startup/shutdown (lifespan) hooks around each test
+  startup/shutdown (lifespan) hooks around each test. It suits endpoints without the DB
+  (`/health`)
+- The `api_client` fixture is for endpoints that use the DB: an async
+  `httpx2.AsyncClient` on `ASGITransport` whose `get_session` is overridden to yield the
+  test's `db_session`, so the test sees (and rolls back) what the request wrote. Async
+  tests: `response = await api_client.post(...)`.
+  See [database.md](database.md#testing-with-the-database)
 
 **Useful flags** (run from `backend/`):
 

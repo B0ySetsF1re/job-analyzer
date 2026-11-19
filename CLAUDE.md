@@ -216,7 +216,8 @@ job-analyzer/
 ├── backend/
 │   ├── app/
 │   │   ├── api/        # FastAPI routers
-│   │   ├── models/     # Pydantic schemas + DB models
+│   │   ├── models/     # SQLAlchemy models (DB tables)
+│   │   ├── schemas/    # Pydantic schemas (API DTOs)
 │   │   ├── agents/     # PydanticAI agents and tools
 │   │   ├── tasks/      # Procrastinate tasks
 │   │   └── main.py
@@ -243,7 +244,7 @@ job-analyzer/
 
 ### Phase 1 — Core pipeline
 - [x] DB models + Alembic migrations (postings, profile)
-- [ ] Users + authentication: `users` + `invites` tables, invite-code registration,
+- [x] Users + authentication: `users` + `invites` tables, invite-code registration,
       JWT login, `GET /auth/me`, `get_current_user`
 - [ ] RBAC: `require_role`, `/admin/users`, `/admin/invites`, `make create-admin` (first admin)
 - [ ] `POST/GET/DELETE /postings` (owner-scoped)

@@ -7,7 +7,7 @@ from sqlalchemy import func, select, update
 from app.api.deps import CurrentUser, SessionDep, SettingsDep
 from app.models.invite import Invite
 from app.models.user import User
-from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserRead
+from app.schemas import LoginRequest, RegisterRequest, TokenResponse, UserRead
 from app.security import (
     create_access_token,
     dummy_password_hash,
