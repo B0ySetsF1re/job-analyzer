@@ -4,6 +4,7 @@ Use the `Annotated` aliases as handler parameters, e.g. `user: CurrentUser`. Fas
 resolves them per request (≈ NestJS providers + `@UseGuards(AuthGuard('jwt'))`).
 """
 
+from collections.abc import Awaitable, Callable
 from typing import Annotated
 
 import jwt
@@ -13,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.db import get_session
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.security import decode_access_token
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -66,3 +67,35 @@ async def get_current_user(
 # Handler parameter for authenticated endpoints: `async def me(user: CurrentUser)`.
 # ≈ `@UseGuards(AuthGuard('jwt'))` + a `@CurrentUser()` param decorator, in one alias.
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def forbidden() -> HTTPException:
+    """The 403 for an authenticated user whose role isn't allowed.
+
+    401 = "who are you?" (no or bad token), 403 = "I know you, but no".
+    """
+    return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+
+
+def require_role(*roles: UserRole) -> Callable[[User], Awaitable[User]]:
+    """Build a dependency that lets only users with one of `roles` through.
+
+    A dependency *factory*: it returns a new dependency function, configured by `roles`
+    (≈ NestJS `@Roles('admin')` + `RolesGuard`, as one call). `*roles` collects any number
+    of positional arguments into a tuple, like TS `...roles: UserRole[]`.
+
+    Usage: `admin: Annotated[User, Depends(require_role(UserRole.ADMIN))]`, or the
+    `AdminUser` alias below.
+    """
+
+    async def check_role(user: CurrentUser) -> User:
+        if user.role not in roles:
+            raise forbidden()
+
+        return user
+
+    return check_role
+
+
+# Handler parameter for admin-only endpoints: `async def list_users(admin: AdminUser)`.
+AdminUser = Annotated[User, Depends(require_role(UserRole.ADMIN))]

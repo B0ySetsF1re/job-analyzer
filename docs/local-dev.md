@@ -81,6 +81,7 @@ language-agnostic). Run `make` with no target to list everything:
 | `make fmt` | `ruff check --fix` + `ruff format` |
 | `make check` | `lint` then `test` (prerequisites, like `"ci": "pnpm lint && pnpm test"`) |
 | `make db` | Postgres only, waits until healthy |
+| `make create-admin EMAIL=...` | Create the first admin, or promote an existing user (`python -m app.cli create-admin`, password prompted); see [auth.md](auth.md) |
 | `make up` / `make down` | Postgres + API container / stop everything |
 
 How to read it:

@@ -13,12 +13,15 @@ from app.models.user import UserRole
 # `@Transform` after `@IsEmail`).
 type Email = Annotated[EmailStr, AfterValidator(str.lower)]
 
+# Password policy for new passwords (register, `create-admin`), defined once.
+type Password = Annotated[str, Field(min_length=8, max_length=128)]
+
 
 class RegisterRequest(BaseModel):
     """Body of `POST /auth/register`."""
 
     email: Email
-    password: str = Field(min_length=8, max_length=128)
+    password: Password
     invite_code: str = Field(min_length=1)
 
 

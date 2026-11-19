@@ -50,6 +50,9 @@ When helping:
 - Refer to topics by name, not by the number of a previous list.
 - **When reporting changes, list every file touched**, even in the short format:
   `- <what changed>; <file>, <file>` (files as clickable links).
+- **Changes and TODOs are separate sections:** `## Changes` lists what was written and
+  the files touched; `## TODOs` lists the author's TODOs (file, numbers, one line each)
+  and how to test them. Order: Changes → TODOs → Decisions.
 
 ### Docs
 Topic docs live in `docs/`, one file per area (Overview → Structure → topics → Gotchas):
@@ -107,6 +110,7 @@ Prefer the Makefile (repo root; `make` lists all targets):
 - `make lint` / `make fmt` / `make check` (lint + test)
 - `make db` — Postgres only; `make up` / `make down` — full stack with API container
 - `make migrate` — apply migrations; `make migration MSG="..."` — autogenerate one
+- `make create-admin EMAIL=...` — create (or promote) an admin, password prompted
 
 Underlying commands, run from `backend/`:
 - `uv run pytest` — tests

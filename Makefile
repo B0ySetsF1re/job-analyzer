@@ -7,10 +7,10 @@ UV_RUN  := uv run --directory $(BACKEND)
 PYTHON  := 3.13
 
 .DEFAULT_GOAL := help
-.PHONY: help install dev test lint fmt check db migrate migration up down
+.PHONY: help install dev test lint fmt check db migrate migration create-admin up down
 
 help: ## Show available targets
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-13s\033[0m %s\n", $$1, $$2}'
 
 install: ## Install runtimes (mise, if present), Python deps (uv), create .env if missing
 	@if command -v mise >/dev/null 2>&1; then mise install; \
@@ -43,6 +43,10 @@ migrate: db ## Apply all pending migrations (starts Postgres first)
 migration: db ## Autogenerate a migration from model changes: make migration MSG="add postings"
 	@test -n "$(MSG)" || (echo 'Usage: make migration MSG="describe the change"' && exit 1)
 	$(UV_RUN) alembic revision --autogenerate -m "$(MSG)"
+
+create-admin: db ## Create an admin or promote a user (password prompted): make create-admin EMAIL=you@example.com
+	@test -n "$(EMAIL)" || (echo 'Usage: make create-admin EMAIL=you@example.com' && exit 1)
+	$(UV_RUN) python -m app.cli create-admin "$(EMAIL)"
 
 up: ## Start Postgres + API container with hot reload
 	docker compose --profile api up --build
