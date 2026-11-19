@@ -3,6 +3,7 @@
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 
+import httpx2
 import psycopg
 import pytest
 from alembic import command
@@ -14,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.config import Settings, get_settings
-from app.db import sqlalchemy_url
+from app.db import get_session, sqlalchemy_url
 from app.main import app
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -115,3 +116,29 @@ async def db_session(test_database_url: URL) -> AsyncGenerator[AsyncSession]:
             await session.close()
             await transaction.rollback()
     await engine.dispose()
+
+
+@pytest.fixture
+async def api_client(db_session: AsyncSession) -> AsyncGenerator[httpx2.AsyncClient]:
+    """Async HTTP client for the app, sharing the test's rolled-back `db_session`.
+
+    Handlers get `db_session` instead of a real session, so whatever they commit is
+    rolled back after the test, and the test can read it through the same session.
+
+    Why not `TestClient`: it runs the app on its own event loop, while `db_session`'s
+    connection belongs to the test's loop; an async DB connection can't be shared across
+    loops. `ASGITransport` calls the app directly on the current loop (no server, no
+    network). It doesn't run the lifespan, which these tests don't need.
+    """
+
+    async def override_get_session() -> AsyncGenerator[AsyncSession]:
+        yield db_session
+
+    app.dependency_overrides[get_session] = override_get_session
+    app.dependency_overrides[get_settings] = get_test_settings
+
+    transport = httpx2.ASGITransport(app=app)
+    async with httpx2.AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+
+    app.dependency_overrides.clear()

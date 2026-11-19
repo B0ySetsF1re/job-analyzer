@@ -254,3 +254,5 @@ covered in [database.md](database.md#testing-with-the-database).
 
 ### `StarletteDeprecationWarning`: install `httpx2` instead of `httpx`
 - Starlette's `TestClient` deprecated `httpx`; the dev dependency is `httpx2`
+- It's also imported as `httpx2` (`import httpx2`, `httpx2.AsyncClient`); `import httpx`
+  fails with `ModuleNotFoundError`

@@ -25,12 +25,59 @@ backend/
   app/
     security.py         # password hashing, JWT access tokens, invite codes (pure functions)
     config.py           # jwt_secret, jwt_expires_minutes
+    api/
+      deps.py           # SessionDep, SettingsDep, get_current_user, CurrentUser
+      auth.py           # /auth router: register, login, me
+    schemas/
+      auth.py           # RegisterRequest, LoginRequest, TokenResponse, UserRead
     models/
       user.py           # User, UserRole (table `users`)
       invite.py         # Invite (table `invites`)
   tests/
     test_security.py    # unit tests, no DB
+    test_auth_api.py    # HTTP tests through api_client
 ```
+
+---
+
+## Endpoints
+
+| Endpoint | Success | Failures |
+|---|---|---|
+| `POST /auth/register` | `201` + `UserRead` | `400` any invite problem (one message), `409` email taken, `422` invalid body |
+| `POST /auth/login` | `200` + `{access_token, token_type}` | `401` unknown email / wrong password / inactive (one message) |
+| `GET /auth/me` | `200` + `UserRead` | `401` (+ `WWW-Authenticate: Bearer`) |
+
+- **Generic errors on purpose:** a single message per endpoint doesn't tell a guesser which
+  check failed (which emails exist, whether a code was ever valid)
+- **Equal timing:** login verifies against `dummy_password_hash()` when the email is
+  unknown, so "unknown email" isn't measurably faster than "wrong password"
+- **Atomic redeem:** `UPDATE invites ... WHERE id = :id AND used_at IS NULL RETURNING id`.
+  Two concurrent registrations can both pass the checks; only one gets a row back
+- **Emails are lowercased** by the `Email` type in `app/schemas/auth.py`
+
+## `get_current_user` / `CurrentUser`
+
+```python
+@router.get("/me")
+async def me(user: CurrentUser) -> UserRead: ...
+```
+
+`CurrentUser = Annotated[User, Depends(get_current_user)]`: reads the Bearer header
+(`HTTPBearer`), decodes the token, loads the user, and raises the same 401 for a missing,
+invalid or expired token and for a deleted or inactive user. NestJS parallel:
+`@UseGuards(AuthGuard('jwt'))` + a `@CurrentUser()` param decorator.
+
+## CPU-heavy calls in async handlers
+
+argon2 is slow on purpose (tens of ms of CPU). Called directly in an `async def` handler,
+it blocks the event loop, and every other request waits. Run it in a worker thread:
+
+```python
+password_hash = await run_in_threadpool(hash_password, body.password)
+```
+
+Node's `bcrypt` does the same internally (libuv thread pool).
 
 ---
 

@@ -46,6 +46,16 @@ def verify_password(password: str, password_hash: str) -> bool:
     return get_password_hasher().verify(password, password_hash)
 
 
+@lru_cache
+def dummy_password_hash() -> str:
+    """A valid hash to verify against when a login email doesn't exist.
+
+    Verifying anyway makes "unknown email" take as long as "wrong password", so response
+    times don't reveal which emails are registered (a timing attack).
+    """
+    return hash_password("dummy-password-for-timing")
+
+
 # --- Access tokens (JWT) --------------------------------------------------------------------
 
 

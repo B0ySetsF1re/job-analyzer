@@ -293,6 +293,7 @@ each test that asks for db_session
 | `test_database_url` | session (once per run) | URL of a freshly migrated `job_analyzer_test` DB |
 | `db_session` | function (per test) | `AsyncSession` inside a transaction that is always rolled back |
 | `anyio_backend` | function | Makes `@pytest.mark.anyio` tests run on asyncio |
+| `api_client` | function | `httpx2.AsyncClient` for the app; handlers get the test's `db_session` |
 
 ```python
 @pytest.mark.anyio
@@ -423,6 +424,13 @@ async def test_something(db_session: AsyncSession) -> None:
   (every test runs in one) get the same timestamp. Use `clock_timestamp()` if you ever need
   wall-clock time
 
+### API test with `TestClient` + `db_session` fails with event-loop errors
+- **Cause:** `TestClient` runs the app on its own event loop, but `db_session`'s async
+  connection belongs to the test's loop and can't be used from another one
+- **Fix:** use the `api_client` fixture (`httpx2.AsyncClient` + `ASGITransport`), which
+  calls the app on the test's loop. `TestClient` (`client` fixture) is fine for tests
+  without the database, like `/health`
+
 ### FK column still holds the old id after `ON DELETE SET NULL`
 - **Cause:** Postgres clears the column, not SQLAlchemy; a loaded object keeps its old value
 - **Fix:** `await session.refresh(obj)` to read the row again (or `expunge_all()` and reload)
@@ -432,6 +440,11 @@ async def test_something(db_session: AsyncSession) -> None:
   relationship or an expired attribute
 - **Fix:** load relationships explicitly (`selectinload(...)`) and keep
   `expire_on_commit=False`
+- **Typical case: reading an object after `commit()`**, e.g.
+  `await session.commit()` + `return UserRead.model_validate(user)` in a handler. It
+  works only because `get_sessionmaker()` sets `expire_on_commit=False`; with the default
+  (`True`), commit expires every attribute and the first read (`user.email`) needs a
+  reload query. Any new `async_sessionmaker(...)` (worker, scripts) must set it too
 
 ### `make migrate` fails with "connection refused"
 - Postgres isn't running: `make db` first. Migrations run from the host, so they use
