@@ -1,4 +1,4 @@
-"""Dependencies shared by routers: DB session, settings, the current user.
+"""Dependencies shared by routers: DB session, settings, services, the current user.
 
 Use the `Annotated` aliases as handler parameters, e.g. `user: CurrentUser`. FastAPI
 resolves them per request (≈ NestJS providers + `@UseGuards(AuthGuard('jwt'))`).
@@ -17,9 +17,26 @@ from app.db import get_session
 from app.models.user import User, UserRole
 from app.schemas import PaginationParams
 from app.security import decode_access_token
+from app.services.auth import AuthService
+from app.services.invites import InviteService
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
+
+
+# Services: one small provider each, built per request with that request's session.
+# The services themselves don't import FastAPI, so the CLI, the worker and tests construct
+# them directly: `InviteService(session)` (≈ the `providers` list of a NestJS module).
+def get_auth_service(session: SessionDep, settings: SettingsDep) -> AuthService:
+    return AuthService(session, settings)
+
+
+def get_invite_service(session: SessionDep) -> InviteService:
+    return InviteService(session)
+
+
+AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+InviteServiceDep = Annotated[InviteService, Depends(get_invite_service)]
 
 # `?limit=&offset=` for list endpoints. `Query()` on a Pydantic model reads its fields from
 # the query string (≈ a NestJS `@Query() dto: PaginationDto` with class-validator).

@@ -9,13 +9,10 @@ from typing import Annotated
 
 import typer
 from pydantic import TypeAdapter, ValidationError
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import dispose_engine, get_sessionmaker
-from app.models.user import User, UserRole
 from app.schemas import Email, Password
-from app.security import hash_password
+from app.services.users import UserService
 
 cli = typer.Typer(no_args_is_help=True)
 
@@ -27,38 +24,11 @@ def main() -> None:
     # A callback keeps subcommand mode, so the call stays `app.cli create-admin EMAIL`.
 
 
-async def create_or_promote_admin(session: AsyncSession, email: str, password: str) -> bool:
-    """Make `email` an active admin with `password`; return True if the user was created.
-
-    An existing user is promoted: role `admin`, reactivated, and the password is replaced
-    by the new one. So the command also recovers a locked-out admin.
-
-    `email` and `password` are already validated (see `create_admin`).
-    """
-    user = await session.scalar(select(User).where(User.email == email))
-
-    password_hash = hash_password(password)
-
-    if not user:
-        user = User(email=email, password_hash=password_hash, role=UserRole.ADMIN)
-        session.add(user)
-        created = True
-    else:
-        user.role = UserRole.ADMIN
-        user.is_active = True
-        user.password_hash = password_hash
-        created = False
-
-    await session.commit()
-
-    return created
-
-
 async def _run_create_admin(email: str, password: str) -> bool:
     """Open a session for one command, and close the connection pool afterwards."""
     try:
         async with get_sessionmaker()() as session:
-            return await create_or_promote_admin(session, email, password)
+            return await UserService(session).create_or_promote_admin(email, password)
     finally:
         # The API closes the pool in its lifespan; a CLI process has no lifespan.
         await dispose_engine()

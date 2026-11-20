@@ -19,17 +19,24 @@ backend/
     config.py         # Settings (pydantic-settings) + get_settings()
     db.py             # SQLAlchemy engine/session/Base, see database.md
     security.py       # password hashing, JWT, invite codes, see auth.md
+    errors.py         # DomainError + subclasses (status code + detail)
+    cli.py            # Typer admin commands (create-admin)
     api/
       __init__.py
-      deps.py         # SessionDep, SettingsDep, CurrentUser
+      deps.py         # SessionDep, SettingsDep, PaginationDep, services, CurrentUser, AdminUser
       health.py       # GET /health
       auth.py         # /auth: register, login, me
+      admin.py        # /admin: invites (users next)
+    services/         # business logic + queries, one class per resource
     models/           # SQLAlchemy models, see database.md
     schemas/          # Pydantic request/response schemas (barrel __init__.py)
       auth.py
+      invite.py
+      pagination.py   # PaginationParams, Page[T]
   migrations/         # Alembic, see database.md
   tests/
     conftest.py       # shared fixtures (client, api_client, settings, test DB)
+    helpers.py        # create_user, create_invite, auth headers (plain functions)
     test_auth_api.py
     test_config.py
     test_db.py
@@ -142,6 +149,26 @@ typed, validated objects.
   No separate `response_model=` or `@ApiResponse` needed
 - Response models are Pydantic `BaseModel` subclasses — the DTO-with-class-validator
   equivalent, but validation runs on construction
+
+### Services
+Layers, like NestJS controller → service:
+
+```
+route (app/api)  ──►  service (app/services)  ──►  SQLAlchemy / security helpers
+  HTTP in/out          business rules, queries,
+  Pydantic schemas     commit; raises DomainError
+```
+
+- **A service is a class** whose constructor takes its dependencies:
+  `InviteService(session)`, `AuthService(session, settings)`. It doesn't import FastAPI
+- **Wiring in `app/api/deps.py`:** a provider per service plus an alias,
+  `InviteServiceDep = Annotated[InviteService, Depends(get_invite_service)]` (≈ the
+  `providers` of a NestJS module). The CLI, worker and tests call the constructor
+  directly with their own session
+- **Errors:** a service raises e.g. `EmailTaken()` (`app/errors.py`); the
+  `@app.exception_handler(DomainError)` in `main.py` answers with the class's
+  `status_code` and `{"detail": ...}`, the same shape as `HTTPException` (≈ NestJS
+  `throw new ConflictException()` + an exception filter). Routes need no `try`/`except`
 
 ---
 

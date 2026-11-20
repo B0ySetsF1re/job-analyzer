@@ -25,9 +25,12 @@ backend/
   app/
     security.py         # password hashing, JWT access tokens, invite codes (pure functions)
     config.py           # jwt_secret, jwt_expires_minutes
+    errors.py           # InvalidInvite (400), InvalidCredentials (401), EmailTaken (409)
     api/
-      deps.py           # SessionDep, SettingsDep, get_current_user, CurrentUser
-      auth.py           # /auth router: register, login, me
+      deps.py           # get_current_user, CurrentUser, require_role, AdminUser
+      auth.py           # /auth router (thin): register, login, me
+    services/
+      auth.py           # AuthService: register (atomic invite redeem), login
     schemas/
       auth.py           # RegisterRequest, LoginRequest, TokenResponse, UserRead
     models/

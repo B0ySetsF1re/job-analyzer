@@ -110,7 +110,18 @@ def make_posting(**overrides: object) -> Posting:
   `PostingRead`) are Pydantic in `app/schemas/<resource>.py`; tables are SQLAlchemy in
   `app/models/`. See [backend.md](backend.md#pydantic)
 - **Shared dependencies live in `app/api/deps.py`** (`SessionDep`, `SettingsDep`,
-  `CurrentUser`). Every route except the public ones takes `user: CurrentUser`
+  `CurrentUser`, `<Name>ServiceDep`). Every route except the public ones takes
+  `user: CurrentUser`
+- **Routes are thin:** validate input (Pydantic), call a service, shape the response.
+  Queries and business rules live in services. See [backend.md](backend.md#services)
+- **Services are classes in `app/services/<resource>.py`**, constructed with their
+  dependencies (`session`, `settings`, ...) and free of FastAPI imports, so the CLI, the
+  worker and tests build them directly. Routes get them through a provider in `deps.py`.
+  Services commit their own unit of work and take parameter objects (`PaginationParams`,
+  request schemas), not loose arguments
+- **Services raise `DomainError` subclasses** (`app/errors.py`), never `HTTPException`.
+  Each subclass sets `status_code` and `detail`; one handler in `app/main.py` turns them
+  into responses. `HTTPException` stays only in `deps.py` (401/403 auth checks)
 - **Auth failures are generic:** one message per endpoint (`400` for any invite problem,
   `401` for any login or token problem), so responses don't reveal which check failed.
   See [auth.md](auth.md#endpoints)

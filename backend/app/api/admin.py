@@ -1,10 +1,8 @@
 """`/admin` endpoints: invites (and users, next). Admin role required for every route."""
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, select
 
-from app.api.deps import PaginationDep, SessionDep, require_role
-from app.models.invite import Invite
+from app.api.deps import InviteServiceDep, PaginationDep, require_role
 from app.models.user import UserRole
 from app.schemas import InviteRead, Page
 
@@ -24,18 +22,12 @@ router = APIRouter(
 
 
 @router.get("/invites")
-async def list_invites(session: SessionDep, pagination: PaginationDep) -> Page[InviteRead]:
+async def list_invites(invites: InviteServiceDep, pagination: PaginationDep) -> Page[InviteRead]:
     """All invites, newest first, with their derived status."""
-    total = await session.scalar(select(func.count()).select_from(Invite))
-    items = await session.scalars(
-        select(Invite)
-        .order_by(Invite.created_at.desc(), Invite.id.desc())
-        .limit(pagination.limit)
-        .offset(pagination.offset)
-    )
-
-    invites = [InviteRead.model_validate(invite) for invite in items]
-
+    rows, total = await invites.list(pagination)
     return Page[InviteRead](
-        items=invites, total=total, limit=pagination.limit, offset=pagination.offset
+        items=[InviteRead.model_validate(invite) for invite in rows],
+        total=total,
+        limit=pagination.limit,
+        offset=pagination.offset,
     )

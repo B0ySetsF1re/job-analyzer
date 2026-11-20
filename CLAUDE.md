@@ -219,11 +219,13 @@ Port the concepts to Terraform (do not mix CDK and Terraform in this project):
 job-analyzer/
 ├── backend/
 │   ├── app/
-│   │   ├── api/        # FastAPI routers
+│   │   ├── api/        # FastAPI routers (thin) + deps.py
+│   │   ├── services/   # business logic + queries (classes, no FastAPI)
 │   │   ├── models/     # SQLAlchemy models (DB tables)
 │   │   ├── schemas/    # Pydantic schemas (API DTOs)
 │   │   ├── agents/     # PydanticAI agents and tools
 │   │   ├── tasks/      # Procrastinate tasks
+│   │   ├── errors.py   # DomainError subclasses → HTTP status via one handler
 │   │   └── main.py
 │   ├── migrations/
 │   ├── tests/
