@@ -116,6 +116,12 @@ holds only project settings. Personal ones (theme, font) belong in your user set
 - `python.analysis.extraPaths: ["backend"]` → `from app...` imports resolve, even though
   the workspace root is the repo, not `backend/`
 - pytest runs from `backend/` (`python.testing.cwd`), the same way `make test` does
+- **Python is formatted by ruff on save** (`[python]` block: `charliermarsh.ruff` as the
+  default formatter, imports sorted on save). The extension reads `backend/pyproject.toml`
+  (line length 100), so the editor and `make fmt` agree. Disable other Python formatters
+  (Black, autopep8) for this workspace: they wrap at 88
+- `.vscode/extensions.json` recommends the extensions (Python, Ruff); VS Code offers to
+  install them when the repo is opened
 
 If imports still show as unresolved: Command Palette → "Python: Select Interpreter" →
 pick `backend/.venv`. A workspace that was opened earlier remembers its old choice.

@@ -271,6 +271,8 @@ job-analyzer/
 ### Phase 5 — Frontend (small, time-boxed: ~2–3 sessions)
 - [ ] React + Vite app with the TS client generated from OpenAPI (`make gen-client`)
 - [ ] Login, postings list + details, profile upload, ask box; no design polish
+- [ ] VS Code: TS/TSX formatter (Prettier or Biome) in `.vscode/settings.json` +
+      `extensions.json`, like the `[python]` ruff block
 
 ### Phase 6 — AWS (stretch)
 - [ ] Terraform: VPC, EKS (terraform-aws-modules/eks), ECR, S3 + CloudFront
