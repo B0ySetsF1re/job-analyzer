@@ -14,38 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
 from app.models.invite import Invite
-from app.models.user import User
-from app.security import create_access_token, hash_invite_code, hash_password
+from app.security import create_access_token
+from tests.helpers import PASSWORD, bearer, create_invite, create_user
 
 pytestmark = pytest.mark.anyio
-
-PASSWORD = "correct horse battery"
-
-
-async def create_invite(session: AsyncSession, email: str, **overrides: object) -> str:
-    """Store a pending invite for `email` and return its plain code."""
-    code = f"code-{uuid.uuid4().hex}"
-    fields: dict[str, object] = {
-        "code_hash": hash_invite_code(code),
-        "email": email,
-        "expires_at": datetime.now(UTC) + timedelta(days=7),
-    }
-    session.add(Invite(**(fields | overrides)))
-    await session.flush()
-    return code
-
-
-async def create_user(session: AsyncSession, email: str, **overrides: object) -> User:
-    """Store a user whose password is `PASSWORD`."""
-    fields: dict[str, object] = {"email": email, "password_hash": hash_password(PASSWORD)}
-    user = User(**(fields | overrides))
-    session.add(user)
-    await session.flush()
-    return user
-
-
-def bearer(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
 
 
 # --- POST /auth/register --------------------------------------------------------------------

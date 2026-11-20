@@ -29,7 +29,7 @@ lint: ## Lint + format check (no changes)
 	$(UV_RUN) ruff format --check .
 
 fmt: ## Auto-fix lint issues and format
-	$(UV_RUN) ruff check --fix .
+	$(UV_RUN) ruff check --fix --exit-zero .
 	$(UV_RUN) ruff format .
 
 check: lint test ## Lint + tests (run before committing)

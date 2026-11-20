@@ -78,7 +78,7 @@ language-agnostic). Run `make` with no target to list everything:
 | `make dev` | API on the host with `--reload` |
 | `make test` | pytest; extra args via `make test ARGS="-k health -x"` |
 | `make lint` | `ruff check` + `ruff format --check` |
-| `make fmt` | `ruff check --fix` + `ruff format` |
+| `make fmt` | `ruff check --fix --exit-zero` + `ruff format` (fixes what it can, prints the rest) |
 | `make check` | `lint` then `test` (prerequisites, like `"ci": "pnpm lint && pnpm test"`) |
 | `make db` | Postgres only, waits until healthy |
 | `make create-admin EMAIL=...` | Create the first admin, or promote an existing user (`python -m app.cli create-admin`, password prompted); see [auth.md](auth.md) |
@@ -266,6 +266,13 @@ docker compose down -v                     # stop and wipe the database volume
 ### Makefile: `$` in shell commands
 - Make expands `$` itself; a literal `$` for the shell must be written `$$` (see the `awk`
   call in `help`)
+
+### `make fmt` stops with `E501 Line too long` and doesn't format
+- **Cause:** `ruff check --fix` runs first and exits non-zero for violations it can't fix
+  (E501 is only fixed by the formatter); `make` stops at the first failing recipe line, so
+  `ruff format` never runs
+- **Fix:** `fmt` uses `ruff check --fix --exit-zero`: it still applies fixes and prints
+  what's left, but doesn't stop `make`. `make lint` stays strict
 
 ### uv image tags: versioned tags are trixie-based
 - `uv:0.13-python3.13-bookworm-slim` does not exist; versioned tags use Debian trixie

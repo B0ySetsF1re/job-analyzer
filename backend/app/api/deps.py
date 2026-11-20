@@ -8,17 +8,22 @@ from collections.abc import Awaitable, Callable
 from typing import Annotated
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.db import get_session
 from app.models.user import User, UserRole
+from app.schemas import PaginationParams
 from app.security import decode_access_token
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
+
+# `?limit=&offset=` for list endpoints. `Query()` on a Pydantic model reads its fields from
+# the query string (≈ a NestJS `@Query() dto: PaginationDto` with class-validator).
+PaginationDep = Annotated[PaginationParams, Query()]
 
 # Reads `Authorization: Bearer <token>` and adds the "Authorize" button to /docs.
 # `auto_error=False`: a missing header gives `None` instead of raising inside HTTPBearer,
