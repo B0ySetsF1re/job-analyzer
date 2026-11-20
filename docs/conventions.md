@@ -122,6 +122,13 @@ def make_posting(**overrides: object) -> Posting:
 - **Services raise `DomainError` subclasses** (`app/errors.py`), never `HTTPException`.
   Each subclass sets `status_code` and `detail`; one handler in `app/main.py` turns them
   into responses. `HTTPException` stays only in `deps.py` (401/403 auth checks)
+- **List endpoints are paginated:** the route takes `pagination: PaginationDep` and returns
+  `Page[ItemRead]` (`items`, `total`, `limit`, `offset`; limit 1–100, default 20). The
+  service takes the `PaginationParams` object and returns `(rows, total)`; `total` is a
+  separate `count()` query with the same filters
+- **Paginated queries order by a unique tie-breaker:** e.g.
+  `.order_by(Model.created_at.desc(), Model.id.desc())`. *Why:* rows with equal sort
+  values otherwise come back in any order, so a row can show up on two pages or none
 - **Auth failures are generic:** one message per endpoint (`400` for any invite problem,
   `401` for any login or token problem), so responses don't reveal which check failed.
   See [auth.md](auth.md#endpoints)

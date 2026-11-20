@@ -18,8 +18,10 @@ When helping:
   An explicit request for a specific change ("add X to Y") counts as the go-ahead for
   that change only. Reading files, analysis and read-only commands need no confirmation.
 - The author reviews every change thoroughly and finishes key parts by hand
-  (routers, DB logic, agents, tools) to learn the stack. For these, use
-  **scaffold + TODO** mode:
+  (service methods: business rules and DB queries; agents, tools) to learn the stack.
+  Claude writes the rest in full: schemas, models, error classes, thin routes, `deps.py`
+  wiring, shared plumbing (pagination, helpers) and mechanical refactors. For the
+  author's parts, use **scaffold + TODO** mode:
   - Write the skeleton: imports, function signatures, types, decorators,
     Pydantic models, dependency wiring, docstrings.
   - Leave the core logic as numbered `# TODO n:` comments with explicit hints:
@@ -31,6 +33,8 @@ When helping:
     concrete hint → full solution with explanation. Don't jump to the solution
     unless asked.
   - After they finish, review: correctness, idiomatic Python, edge cases.
+  - When the author says they'll run the tests themselves, only read the code (lint is
+    fine); don't run the tests.
 - Boilerplate (Dockerfiles, configs, Terraform, Helm, migrations setup) can be
   generated fully.
 - Work in small, reviewable steps. One logical change at a time, no large multi-file dumps.
@@ -253,6 +257,17 @@ job-analyzer/
 - [x] Users + authentication: `users` + `invites` tables, invite-code registration,
       JWT login, `GET /auth/me`, `get_current_user`
 - [ ] RBAC: `require_role`, `/admin/users`, `/admin/invites`, `make create-admin` (first admin)
+  - [x] `require_role` + `AdminUser`
+  - [x] `make create-admin` (Typer CLI; promotes, reactivates and resets an existing user)
+  - [x] Pagination (`Page[T]`, `PaginationDep`) + admin router + `GET /admin/invites`
+  - [x] Service layer refactor (services as classes, `DomainError` + one handler)
+  - [ ] `POST /admin/invites`: `{ email, expires_in_days? }` (1–30, default 7), returns the
+        plain code once; `409` if the email already has an account; older pending invites
+        for the same email are kept. `DELETE /admin/invites/{id}`: `404` unknown, `409`
+        already used. Logic in `InviteService` (author's TODOs), new `NotFound` / `Conflict`
+  - [ ] `/admin/users`: `GET` (paginated), `PATCH` (role, `is_active`), `DELETE`; an admin
+        can't demote, deactivate or delete themselves. Logic in `UserService`
+  - [ ] Wrap-up: RBAC section in `docs/auth.md`, check off RBAC
 - [ ] `POST/GET/DELETE /postings` (owner-scoped)
 - [ ] PydanticAI extraction agent with `PostingExtraction` output (sync first)
 - [ ] `PUT/GET /profile` (one per user)
