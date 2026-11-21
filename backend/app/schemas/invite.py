@@ -4,7 +4,12 @@ import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
+
+from app.schemas.auth import Email
+
+DEFAULT_INVITE_DAYS = 7
+MAX_INVITE_DAYS = 30
 
 
 class InviteStatus(StrEnum):
@@ -40,3 +45,21 @@ class InviteRead(BaseModel):
         if self.expires_at <= datetime.now(UTC):
             return InviteStatus.EXPIRED
         return InviteStatus.PENDING
+
+
+class InviteCreate(BaseModel):
+    """Body of `POST /admin/invites`. Out-of-range `expires_in_days` → automatic 422."""
+
+    email: Email
+    expires_in_days: int = Field(default=DEFAULT_INVITE_DAYS, ge=1, le=MAX_INVITE_DAYS)
+
+
+class InviteCreated(InviteRead):
+    """Response of `POST /admin/invites`: the invite plus its plain code, shown only here.
+
+    Subclassing reuses every field of `InviteRead` (≈ TS `interface InviteCreated extends
+    InviteRead`). The code isn't stored on the ORM row, so the route adds it next to the
+    row's fields (see `create_invite` in `app/api/admin.py`).
+    """
+
+    code: str

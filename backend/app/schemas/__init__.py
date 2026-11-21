@@ -8,11 +8,13 @@ from app.schemas.auth import (
     TokenResponse,
     UserRead,
 )
-from app.schemas.invite import InviteRead, InviteStatus
+from app.schemas.invite import InviteCreate, InviteCreated, InviteRead, InviteStatus
 from app.schemas.pagination import Page, PaginationParams
 
 __all__ = [
     "Email",
+    "InviteCreate",
+    "InviteCreated",
     "InviteRead",
     "InviteStatus",
     "LoginRequest",

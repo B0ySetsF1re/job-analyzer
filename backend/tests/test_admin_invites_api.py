@@ -1,14 +1,17 @@
-"""API tests for `GET /admin/invites`: access control, status, order, pagination."""
+"""API tests for `/admin/invites`: list (access, status, order, pagination), create, revoke."""
 
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import httpx2
 import pytest
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
+from app.models.invite import Invite
 from app.models.user import UserRole
-from tests.helpers import admin_headers, auth_headers, create_invite, create_user
+from tests.helpers import PASSWORD, admin_headers, auth_headers, create_invite, create_user
 
 pytestmark = pytest.mark.anyio
 
@@ -92,3 +95,168 @@ async def test_list_invites_rejects_out_of_range_pagination(
     response = await api_client.get(f"/admin/invites?{query}", headers=headers)
 
     assert response.status_code == 422
+
+
+# --- POST /admin/invites --------------------------------------------------------------------
+
+
+async def test_create_invite_forbids_non_admin(
+    api_client: httpx2.AsyncClient, db_session: AsyncSession, settings: Settings
+) -> None:
+    user = await create_user(db_session, "user@example.com", role=UserRole.USER)
+
+    response = await api_client.post(
+        "/admin/invites", json={"email": "new@example.com"}, headers=auth_headers(user, settings)
+    )
+
+    assert response.status_code == 403
+
+
+async def test_create_invite_returns_code_that_registers(
+    api_client: httpx2.AsyncClient, db_session: AsyncSession, settings: Settings
+) -> None:
+    admin = await create_user(db_session, "admin@example.com", role=UserRole.ADMIN)
+
+    response = await api_client.post(
+        "/admin/invites", json={"email": "New@Example.com"}, headers=auth_headers(admin, settings)
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["email"] == "new@example.com"
+    assert body["status"] == "pending"
+    assert body["created_by"] == str(admin.id)
+    assert "code_hash" not in body
+
+    register = await api_client.post(
+        "/auth/register",
+        json={"email": "new@example.com", "password": PASSWORD, "invite_code": body["code"]},
+    )
+    assert register.status_code == 201
+
+
+async def test_create_invite_expires_in_seven_days_by_default(
+    api_client: httpx2.AsyncClient, db_session: AsyncSession, settings: Settings
+) -> None:
+    headers = await admin_headers(db_session, settings)
+
+    response = await api_client.post(
+        "/admin/invites", json={"email": "new@example.com"}, headers=headers
+    )
+
+    assert response.status_code == 201
+    expires_at = datetime.fromisoformat(response.json()["expires_at"])
+    assert abs(expires_at - (datetime.now(UTC) + timedelta(days=7))) < timedelta(minutes=1)
+
+
+async def test_create_invite_uses_expires_in_days(
+    api_client: httpx2.AsyncClient, db_session: AsyncSession, settings: Settings
+) -> None:
+    headers = await admin_headers(db_session, settings)
+
+    response = await api_client.post(
+        "/admin/invites", json={"email": "new@example.com", "expires_in_days": 30}, headers=headers
+    )
+
+    assert response.status_code == 201
+    expires_at = datetime.fromisoformat(response.json()["expires_at"])
+    assert abs(expires_at - (datetime.now(UTC) + timedelta(days=30))) < timedelta(minutes=1)
+
+
+@pytest.mark.parametrize("days", [0, 31])
+async def test_create_invite_rejects_out_of_range_expiry(
+    api_client: httpx2.AsyncClient, db_session: AsyncSession, settings: Settings, days: int
+) -> None:
+    headers = await admin_headers(db_session, settings)
+
+    response = await api_client.post(
+        "/admin/invites",
+        json={"email": "new@example.com", "expires_in_days": days},
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+
+
+async def test_create_invite_rejects_registered_email(
+    api_client: httpx2.AsyncClient, db_session: AsyncSession, settings: Settings
+) -> None:
+    headers = await admin_headers(db_session, settings)
+    await create_user(db_session, "taken@example.com")
+
+    response = await api_client.post(
+        "/admin/invites", json={"email": "taken@example.com"}, headers=headers
+    )
+
+    assert response.status_code == 409
+
+
+async def test_create_invite_keeps_older_pending_invites(
+    api_client: httpx2.AsyncClient, db_session: AsyncSession, settings: Settings
+) -> None:
+    headers = await admin_headers(db_session, settings)
+    old_code = await create_invite(db_session, "new@example.com")
+
+    response = await api_client.post(
+        "/admin/invites", json={"email": "new@example.com"}, headers=headers
+    )
+
+    assert response.status_code == 201
+    assert response.json()["code"] != old_code
+    count = await db_session.scalar(
+        select(func.count()).select_from(Invite).where(Invite.email == "new@example.com")
+    )
+    assert count == 2
+
+
+# --- DELETE /admin/invites/{id} -------------------------------------------------------------
+
+
+async def test_revoke_invite_deletes_it(
+    api_client: httpx2.AsyncClient, db_session: AsyncSession, settings: Settings
+) -> None:
+    headers = await admin_headers(db_session, settings)
+    await create_invite(db_session, "new@example.com")
+    invite_id = await db_session.scalar(select(Invite.id))
+
+    response = await api_client.delete(f"/admin/invites/{invite_id}", headers=headers)
+
+    assert response.status_code == 204
+    assert await db_session.scalar(select(Invite.id)) is None
+
+
+async def test_revoke_invite_allows_expired(
+    api_client: httpx2.AsyncClient, db_session: AsyncSession, settings: Settings
+) -> None:
+    headers = await admin_headers(db_session, settings)
+    await create_invite(
+        db_session, "new@example.com", expires_at=datetime.now(UTC) - timedelta(days=1)
+    )
+    invite_id = await db_session.scalar(select(Invite.id))
+
+    response = await api_client.delete(f"/admin/invites/{invite_id}", headers=headers)
+
+    assert response.status_code == 204
+
+
+async def test_revoke_invite_returns_404_for_unknown_id(
+    api_client: httpx2.AsyncClient, db_session: AsyncSession, settings: Settings
+) -> None:
+    headers = await admin_headers(db_session, settings)
+
+    response = await api_client.delete(f"/admin/invites/{uuid.uuid4()}", headers=headers)
+
+    assert response.status_code == 404
+
+
+async def test_revoke_invite_rejects_used_invite(
+    api_client: httpx2.AsyncClient, db_session: AsyncSession, settings: Settings
+) -> None:
+    headers = await admin_headers(db_session, settings)
+    await create_invite(db_session, "new@example.com", used_at=datetime.now(UTC))
+    invite_id = await db_session.scalar(select(Invite.id))
+
+    response = await api_client.delete(f"/admin/invites/{invite_id}", headers=headers)
+
+    assert response.status_code == 409
+    assert await db_session.scalar(select(Invite.id)) == invite_id

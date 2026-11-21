@@ -21,6 +21,20 @@ class DomainError(Exception):
         super().__init__(self.detail)
 
 
+class NotFound(DomainError):
+    """The requested row doesn't exist (or, later, belongs to another user)."""
+
+    status_code = HTTPStatus.NOT_FOUND
+    detail = "Not found"
+
+
+class Conflict(DomainError):
+    """The request clashes with the current state of the row, e.g. revoking a used invite."""
+
+    status_code = HTTPStatus.CONFLICT
+    detail = "Conflict"
+
+
 class InvalidInvite(DomainError):
     """Unknown, used, expired or other-email invite: one message, so guessers learn nothing."""
 
