@@ -78,6 +78,8 @@ Inside function bodies, statements are grouped by kind and the groups are separa
 blank line. *Why:* each kind of step (I/O, plain computation, branching) stands out at a
 glance. Ruff keeps single blank lines, so it doesn't fight these rules.
 
+Applies to app code and tests. Older code isn't reformatted in bulk; new code follows it.
+
 - **`await` calls form their own group**, including awaited assignments
   (`x = await ...`). Consecutive `await`s stay together; nothing else joins their group
 - **Other kinds get their own groups too:** variable assignments and calculations; bare
