@@ -38,6 +38,12 @@ When helping:
 - Boilerplate (Dockerfiles, configs, Terraform, Helm, migrations setup) can be
   generated fully.
 - Work in small, reviewable steps. One logical change at a time, no large multi-file dumps.
+- **The Plan section is binding.** Use the names, endpoints, rules and scope recorded
+  there as they are. Any deviation (renaming, refactoring existing code, extra logic such
+  as race-safety, a different error hierarchy) goes under `## Decisions` as a question;
+  it is never built into the plan.
+- **Scaffolds match the complexity of earlier steps.** If a TODO needs a new technique or
+  pattern, propose it under `## Decisions` first.
 - Briefly explain non-obvious Python idioms and library choices in each change.
 - Update the checklists in the Plan section when a step is done.
 
@@ -57,6 +63,11 @@ When helping:
 - **Changes and TODOs are separate sections:** `## Changes` lists what was written and
   the files touched; `## TODOs` lists the author's TODOs (file, numbers, one line each)
   and how to test them. Order: Changes → TODOs → Decisions.
+- **Plans before any change use the same layout:** `## Plan` (what Claude will write,
+  one line per item, files as clickable links) → `## TODOs` (the author's parts, one line
+  each) → `## Decisions`. No reasoning or justification unless the author asks.
+- **Decisions are one line each:** `<topic>: <option a> / <option b>`, with the recommended
+  option marked `(recommended)`. Explain the trade-offs only when asked.
 
 ### Docs
 Topic docs live in `docs/`, one file per area (Overview → Structure → topics → Gotchas):
