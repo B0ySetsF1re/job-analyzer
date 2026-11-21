@@ -73,6 +73,42 @@ Commit messages follow [Conventional Commits 1.0.0](https://www.conventionalcomm
   modules directly (`from app.models.user import User`). *Why:* schemas are a leaf package;
   barrels elsewhere invite circular imports and load more than needed
 
+### Blank lines
+Inside function bodies, statements are grouped by kind and the groups are separated by one
+blank line. *Why:* each kind of step (I/O, plain computation, branching) stands out at a
+glance. Ruff keeps single blank lines, so it doesn't fight these rules.
+
+- **`await` calls form their own group**, including awaited assignments
+  (`x = await ...`). Consecutive `await`s stay together; nothing else joins their group
+- **Other kinds get their own groups too:** variable assignments and calculations; bare
+  sync calls (`session.add(...)`); `return`
+- **A group of one kind may be split further by logical step**, e.g. "make the code" and
+  "build the row" below
+- **A blank line before and after every `if` block** (the whole `if` / `elif` / `else`
+  chain), and around other compound statements (`for`, `while`, `with`, `try`, `match`)
+- **No blank lines between `if`, `elif` and `else`:** the chain reads as one block
+- No blank line is needed at the start or end of a block (right after `def`, the docstring
+  or `if ...:`, or before a dedent)
+
+```python
+existing_id = await self.session.scalar(select(User.id).where(User.email == data.email))
+
+if existing_id is not None:
+    raise EmailTaken
+
+code = generate_invite_code()
+code_hash = hash_invite_code(code)
+
+expires_at = datetime.now(UTC) + timedelta(days=data.expires_in_days)
+invite = Invite(code_hash=code_hash, email=data.email, expires_at=expires_at)
+
+self.session.add(invite)
+
+await self.session.commit()
+
+return invite, code
+```
+
 ### Docstrings
 Google style. The first line is a one-sentence summary (shown in IDE hovers); details
 follow after a blank line.

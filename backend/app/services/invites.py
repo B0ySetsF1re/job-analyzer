@@ -73,7 +73,6 @@ class InviteService:
 
         if invite is None:
             raise NotFound("Invite not found")
-
         if invite.used_at is not None:
             raise Conflict("Invite already used")
 
